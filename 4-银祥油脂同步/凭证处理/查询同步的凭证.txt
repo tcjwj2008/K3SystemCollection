@@ -1,0 +1,2 @@
+
+SELECT FYear AS 年度,FPeriod AS 期间, FNumber AS 源帐套凭证号,是否同步=CASE WHEN LEN(FSynchroID)>0 THEN '已同步' ELSE '未同步' END,目标帐套凭证号=CASE WHEN LEN(FSynchroID)>0 THEN FSynchroIDNum ELSE '' end  FROM dbo.t_Voucher WHERE fyear='@Year@' ORDER BY FSynchroID DESC
