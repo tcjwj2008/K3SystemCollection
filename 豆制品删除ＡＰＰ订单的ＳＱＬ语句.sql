@@ -146,4 +146,15 @@ WHERE   dbo.t_order.id = t_orderdetail.mainid
         AND t_order.createtime >= '2020-03-01 00:00:01.0470000'
         AND t_order.createtime <= '2020-03-31 23:59:43.0470000'
         AND dbo.t_order.state <> '新建'
-        AND dbo.t_store.storeno LIKE '02.%';     
+        AND dbo.t_store.storeno LIKE '02.%';    
+        
+        
+        
+     SELECT    
+        
+        SELECT id,SUM(t_order.amount) AS amount FROM t_order WHERE createtime >='2020-01-01 00:00:00.0000000'
+AND createtime <'2020-01-02 00:00:00.0000000' AND state<>'新建'
+GROUP BY id 
+SELECT mainid,SUM(t_orderdetail.amount) FROM dbo.t_orderdetail,t_order WHERE t_order.id=t_orderdetail.mainid AND t_order.createtime >='2020-01-01 00:00:00.0000000'
+AND t_order.createtime <'2020-01-02 00:00:00.0000000' AND t_order.state<>'新建' 
+AND mainid='18740'
