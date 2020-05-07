@@ -1,0 +1,61 @@
+USE [yrtzdata]
+GO
+ Object  StoredProcedure [dbo].[bb_se_getsettledata]    Script Date 05172019 140850 
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+-- =============================================                                                                                                      
+-- Author  陈星宇                                                                                                      
+-- Create date 2014-11-06,,                                                                                                      
+-- Description 采购结算数据,,                                                                                                      
+-- ============================================= 
+ALTER procedure [dbo].[bb_se_getsettledata]   -- bb_se_getsettledata '11','2018-06-01','2018-06-27'
+(@cid        varchar(10),
+ @starttime  datetime,
+ @endtime    datetime
+)
+as
+begin
+
+declare @sqltext varchar(max),
+        @year    varchar(4),
+		@i       integer,
+		@cgys    integer 
+select @endtime=dateadd(d,1,@endtime)
+select @i=datediff(year,@starttime,@endtime)
+set @year=convert(varchar(4),year(@starttime))
+set @cgys=0
+select @cgys=convert(int,isnull(yxz,0)) from tz_xt_sysset where cid=replace(@cid,'''','') and gnbh='2028' and isnull(yxz,'')''
+
+set @sqltext=''
+while @i=0
+begin
+  set @year=convert(varchar(4),year(@starttime)+@i)
+  if @i0
+  set @sqltext=@sqltext+'union all  '
+  set @sqltext=@sqltext+'select	convert(char,bbbc.killtime,23) killtime,a.clientname, 
+                                a.quantity,a.grossweight,a.weight,a.settlemoney 	
+                           from tz_cg_register'+@year+' a  
+						  inner join tz_cg_settle'+@year+' b on a.cid=b.cid and a.clientcode=b.clientcode and b.isdelete=0 and b.documenttype=1 and b.stutus-1
+						  inner join tz_cg_settledata'+@year+' c on b.settlecode=c.settlecode and a.rgid=c.rgid 
+						     inner join (select RGID,MIN(CONVERT(char,dateadd(hour,-('+CONVERT(varchar(10),@cgys)+'),killtime),23)) killtime 
+                 from TZ_CG_registerdata'+@year+' 
+                where cid in ('+@cid+') 
+                  and dateadd(hour,-('+CONVERT(varchar(10),@cgys)+'),killtime)='''+convert(char,@starttime,23)+'''
+                  and dateadd(hour,-('+CONVERT(varchar(10),@cgys)+'),killtime)'''+convert(char,@endtime,23)+'''
+                  and killtime is not null
+                group by rgid )  bbbc on a.rgid=bbbc.rgid 
+						  where a.cid in('''+@cid+''') 
+						    and a.issettle=1 
+						    and a.isdelete=0 
+							and dateadd(hour,-('+convert(varchar(30),@cgys)+'),b.settledate)='''+convert(char,@starttime,23)+''' 
+							and dateadd(hour,-('+convert(varchar(30),@cgys)+'),b.settledate)'''+convert(char,@endtime,23)+''' '
+
+  set @i=@i-1
+end
+
+print @sqltext
+exec(@sqltext)
+
+end

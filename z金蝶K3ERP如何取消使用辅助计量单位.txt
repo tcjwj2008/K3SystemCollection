@@ -1,0 +1,71 @@
+金蝶K3ERP如何取消使用辅助计量单位
+
+一，业务背景：
+
+撤销启用辅助计量单位
+
+二，解决方案
+
+2.1清理物料主文件上的辅助计量单位信息
+
+select fsecunitid,fseccoefficient from t_icitem
+
+--update t_icitem set fsecunitid=0,fseccoefficient=0
+
+where fsecunitid<>0 or fseccoefficient<>0
+
+注释：
+
+①，t_icitem ，物料表
+
+②，fsecunitid，物料表上的“辅助计量单位”
+
+③，fseccoefficient，物料表上的“辅助计量单位换算率”
+
+2.2清理本期期初数据中的辅助计量单位信息
+
+select * from dbo.ICInvInitial
+
+--update icinvbal set fsecbegqty=0
+
+where fsecbegqty<>0 and fyear=2009 and fperiod=6
+
+ 
+
+select * from icbal
+
+--update icbal set fsecbegqty=0
+
+where fsecbegqty<>0  and fyear=2009 and fperiod=6
+
+注释：
+
+①，icinvbal，库房存货余额表；
+
+②，icbal，存货余额表；
+
+③，fsecbegqty，库房存货余额表上的“期初数量（辅助计量单位）”；
+
+④，fyear，库房存货余额表上的“会计年度”；
+
+⑤，fperiod，库房存货余额表上的“会计期间”。
+
+2.3清理本期发生的物流单据上的辅助计量信息
+select * from icstockbillentry 
+--update icstockbillentry set fseccoefficient=0,fsecqty=0
+
+where finterid in (select finterid from icstockbill where fdate>='2009-6-1') and fseccoefficient<>0
+
+注释：
+
+    ①，icstockbillentry，出入库单据分录表；
+
+    ②，fseccoefficient，出入库单据分录表上的“辅助计量单位换算率”；
+
+    ③，fsecqty=0，出入库单据分录表上的“辅助数量”；
+
+    ④，icstockbill，出入库单据表；
+
+    ⑤，fdate，出入库单据表上的“单据日期”。
+
+2.4校对即时库存

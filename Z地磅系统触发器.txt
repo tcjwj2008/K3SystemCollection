@@ -1,0 +1,23 @@
+
+create trigger TRG_Trade_Insert on trade
+for insert
+as 
+begin
+--获取新增行称重信息
+	declare @FTradeNo varchar(20)  --单号
+	declare @FOrderNo varchar(20)  --运单号
+	declare @FNet decimal(16,2)    --净重
+	declare @Truckno varchar(20)   --车牌号
+	
+	select @FTradeNo=ticketno1,@FOrderNo=sparestr2,@FNet=net/1000,@Truckno=truckno from inserted 
+    
+	Declare @SQL NVarchar(200)   
+	Declare @FDBName  varchar(50)
+	set @FDBName='[188.188.1.8].Test_AISDF_DFYX' 
+	--拼接链接数据库存储过程
+    SELECT @SQL=N'exec '+@FDBName+'.dbo.pro_TradeToOutStock '''+@FTradeNo +''','''+ @FOrderNo+''','+Convert(varchar(10),@FNet)+','''+@Truckno+''''
+	--print @SQL
+	--执行
+	exec sp_executesql @SQL 
+
+end

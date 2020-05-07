@@ -1,0 +1,17 @@
+select	convert(char,bbbc.killtime,23) killtime,a.clientname, 
+                                a.quantity,a.grossweight,a.weight,a.settlemoney 	
+                           from tz_cg_register2019 a  
+						  inner join tz_cg_settle2019 b on a.cid=b.cid and a.clientcode=b.clientcode and b.isdelete=0 and b.documenttype=1 and b.stutus<>-1
+						  inner join tz_cg_settledata2019 c on b.settlecode=c.settlecode and a.rgid=c.rgid 
+						     inner join (select RGID,MIN(CONVERT(char,dateadd(hour,-(-7),killtime),23)) killtime 
+                 from TZ_CG_registerdata2019 
+                where cid in (11) 
+                  and dateadd(hour,-(-7),killtime)>='2019-10-15                    '
+                  and dateadd(hour,-(-7),killtime)<'2019-10-16                    '
+                  and killtime is not null
+                group by rgid )  bbbc on a.rgid=bbbc.rgid 
+						  where a.cid in('11') 
+						    and a.issettle=1 
+						    and a.isdelete=0 
+							and dateadd(hour,-(-7),b.settledate)>='2019-10-15                    ' 
+							and dateadd(hour,-(-7),b.settledate)<'2019-10-16                    ' 
