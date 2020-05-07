@@ -1,0 +1,7 @@
+SELECT * FROM dbo.ICStockBill WHERE FBillNo='CIN011192'
+
+SELECT FQTY FROM DBO.ICStockBillEntry WHERE FInterID=2581283 AND FAmount=2199.10
+UPDATE ICStockBillEntry SET FQTY=488 WHERE FInterID=2581283 AND FAmount=2199.10
+GO
+
+dbo.SpK3_2Str @sName = 'ICStockBillEntry' -- varchar(50)

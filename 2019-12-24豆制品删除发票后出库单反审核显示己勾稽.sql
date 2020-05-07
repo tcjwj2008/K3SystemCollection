@@ -1,0 +1,13 @@
+SELECT DISTINCT FHookType,FIBTag,FIBInterID,FIBNo,FEquityHook 
+FROM ICHookRelations 
+WHERE FGroupNo IN (SELECT DISTINCT FGroupNo FROM ICHookRelations 
+                   WHERE FIBInterID=2605870 AND FTranType=21)
+AND FIBInterID<>2605870
+GO
+
+
+
+SELECT *
+--DELETE 
+FROM ICHookRelations WHERE FIBInterID=2605870 AND FTranType=21
+

@@ -1,0 +1,1 @@
+SELECT * FROM t_icitemcore WHERE FNumber ='8.12.770'
