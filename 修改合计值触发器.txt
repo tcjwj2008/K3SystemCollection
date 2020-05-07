@@ -1,0 +1,19 @@
+/****** Object:  Trigger [dbo].[Tr_SeOrderEntry_Qiu]    Script Date: 07/31/2019 15:12:57 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+-- ======================
+-- Qiu
+-- ======================
+create TRIGGER [dbo].[Tr_SeOrderEntry_Qiu] 
+   ON  [dbo].[SEOrderEntry] 
+   AFTER INSERT,UPDATE
+AS 
+BEGIN	
+   DECLARE @FInterID INT
+   SET @FInterID = 0
+   Select @FInterID = FInterID From Inserted 
+   Update seorderentry Set FAllAmount= round(FAuxTaxPrice*fauxqty*100,2), FAllStdAmount= round(FAuxTaxPrice*fauxqty*100,2)
+   Where finterid=@finterid    
+END

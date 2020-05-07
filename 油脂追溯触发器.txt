@@ -1,0 +1,25 @@
+/******同步到另外一个库去
+*/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+-- =============================================
+-- update
+-- =============================================
+CREATE TRIGGER tr_updateBatchno_qiu 
+   ON  qx_updateBatchno
+   for INSERT,UPDATE
+AS 
+BEGIN
+	DECLARE @batchno varchar(100) 
+    SELECT  @batchno = batchno
+    FROM    INSERTED 
+    
+    if (1=1)   
+        BEGIN  
+          delete from XMYX_DB.dbo.qx_updateBatchno where batchno=@batchno
+          insert into XMYX_DB.dbo.qx_updateBatchno (batchno) values(@batchno)
+        END  
+END
+GO
