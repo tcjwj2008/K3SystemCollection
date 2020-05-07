@@ -1,0 +1,11 @@
+select * into t_FABalCard20180305 from t_FABalCard
+
+      update bc set bc.FLifePeriods=c.FLifePeriods from t_FABalCard bc
+
+      inner join t_FABalance b on b.FBalID=bc.FBalID
+
+      inner join t_FAAlter a on a.FAssetID=b.FAssetID and a.FDate=b.FAltDate
+
+      inner join t_FACard c on c.FAlterID=a.FAlterID
+
+      where bc.FLifePeriods<>c.FLifePeriods
