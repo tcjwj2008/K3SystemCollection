@@ -1,0 +1,28 @@
+USE [Test_YXSP]
+GO
+/****** Object:  Trigger [dbo].[ItemCheck_qiu]    Script Date: 05/30/2019 13:38:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+-- =============================================
+-- Author:		<Author,,Name>
+-- Create date: <Create Date,,>
+-- Description:	<Description,,>
+-- =============================================
+create TRIGGER [dbo].[ItemCheck_qiu]
+   ON [dbo].[T_SubRKDEntry]
+   FOR   INSERT, UPDATE 
+AS 
+BEGIN
+	 
+	SET NOCOUNT ON;
+	IF EXISTS (SELECT 1 FROM INSERTED INNER JOIN dbo.t_ICItem w ON 
+	   INSERTED.FSubRKDItemID=W.FItemID AND W.FNumber LIKE '8.X%')
+	BEGIN
+	  RAISERROR('不能使用以8.X开头的废弃物料',16,2) 
+	  ROLLBACK TRAN 
+	END
+ 
+
+END

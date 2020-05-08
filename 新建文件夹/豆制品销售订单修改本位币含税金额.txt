@@ -1,0 +1,5 @@
+update a Set FAmount= ROUND(FAuxQty*FAuxTaxPrice/(100+FCESS)*100,2),FAllAmount= round(FAuxTaxPrice*fauxqty,2), FAllStdAmount= round(FAuxTaxPrice*fauxqty,2)
+ 
+ from   seorderentry a,seorder b
+ where a.FInterID=b.FInterID
+ and b.FDate>'2019-08-11' and FAllAmount<> round(FAuxTaxPrice*fauxqty,2)

@@ -1,0 +1,4 @@
+select FFormat,*  from ICTemplate where FID IN ('S01') order by FCtlIndex
+select FFormat,*  from ICTemplateEntry where FID IN ('S01') AND FCtlOrder=71 --FFORMAT =255
+
+UPDATE ICTemplateEntry SET FFormat=''  where FID IN ('S01')  AND FCtlOrder=71 --FFORMAT =255

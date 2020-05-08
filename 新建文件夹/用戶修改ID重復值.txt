@@ -1,0 +1,15 @@
+DECLARE @parint INT
+SET @parint=1
+WHILE 1=1
+BEGIN
+
+DECLARE @user_name VARCHAR(50)
+SELECT TOP 1 @user_name=USER_NAME FROM smes_users WHERE user_id=13
+UPDATE smes_users SET USER_ID=USER_id+@parint WHERE user_name=@user_name
+SET @parint=@parint+1
+END;
+
+
+UPDATE  smes_users SET USER_ID=6 WHERE user_id=2685654
+UPDATE  smes_users SET USER_ID=7 WHERE user_id=10790
+UPDATE  smes_users SET USER_ID=11 WHERE user_id=30880

@@ -1,0 +1,53 @@
+
+/******************************************************************************
+ * FUNCTION NAME: GetICBillNo                                                 *
+ * CREATED BY:    N/A                                                         *
+ * CREATION DATE: 2005-05-31                                                  *
+ * DESCRIPTION:                                                               *
+ * PARAMETERS:                                                                *
+ ******************************************************************************/
+-- declare @BillNo varchar(50)
+--exec [Ly_GetICBillNo] 1,1000005,@BillNo output
+--select @BillNo
+
+CREATE procedure [dbo].[Ly_GetICBillNo]
+    @IsSave         smallint,
+    @FBillType     int,
+    @BillID     VARCHAR (50) output
+AS
+declare @FNumMax INT
+declare @DateFormat varchar(8)
+declare @i int
+declare @FID varchar(10)
+
+--SELECT * ,FFormat,FCurNo FROM ICBillNo where FBillId= 1000021
+select @FNumMax= FCurNo + 1,@DateFormat=FFormat from ICBillNo where FBillId = @FBillType
+
+    if len(@FNumMax) < LEN(@DateFormat)
+    begin	  
+		set @i = len(@FNumMax)
+		set @FID = ''
+		while @i < LEN(@DateFormat)
+		begin
+		  set @FID = @FID + '0'  
+		  set @i = @i + 1
+		end
+		set @FID = @FID --+ CAST(@FNumMax as VARCHAR(8))
+		--set @BillID = @BillNoTitle + @DateFormat + @FID
+    END
+        else
+        set @FID = ''
+
+    select @BillID = isnull(FPreLetter,'') + @FID + convert(VARCHAR (20),isnull(FCurNo+1,1))+ isnull(FSufLetter,'')
+      from ICBillNo
+     where FBillId= @FBillType
+    begin tran
+    if @IsSave=1 update ICBillNo set FCurNo=FCurNo+1 where FBillId = @FBillType
+    if @@error=0 commit
+    else
+    begin
+        rollback
+        select @BillID=''
+    end
+    return
+GO

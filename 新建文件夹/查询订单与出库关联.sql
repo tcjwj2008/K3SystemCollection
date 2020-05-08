@@ -1,0 +1,24 @@
+select DISTINCT FBILLNO from seorder where fbillno not in(
+
+select   FSOURCEBILLNO from icstockbillentry X ,ICSTOCKBILL Y where
+
+X.FINTERID=Y.FINTERID AND FDATE>'2019-08-01') AND FDATE='2019-08-01'
+
+-------------
+select  DISTINCT FSOURCEBILLNO from icstockbillentry X ,ICSTOCKBILL Y where
+X.FINTERID=Y.FINTERID AND FDATE='2019-08-02' AND FSOURCEBILLNO NOT IN(select  
+FBILLNO from seorder WHERE FDATE='2019-08-01' ) 
+
+
+----------------
+select   Y.* from icstockbillentry X ,ICSTOCKBILL Y where
+
+X.FINTERID=Y.FINTERID AND FDATE='2019-08-02' AND X.FSOURCEBILLNO LIKE 'SEORD%'
+GROUP BY Y.FSUPPLYID HAVING COUNT(*)>
+
+-------------
+
+SELECT fcustid,MAX(FBILLNO) FROM seorder WHERE FDATE='2019-08-01' GROUP BY fcustid HAVING COUNT(*)>1
+SELECT FSUPPLYID,MAX(FBILLNO) FROM icstockbill WHERE FDATE='2019-08-02' GROUP BY FSUPPLYID HAVING COUNT(*)>1
+
+select * from icstockbill where fbi

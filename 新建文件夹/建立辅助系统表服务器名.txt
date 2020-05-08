@@ -1,0 +1,17 @@
+drop table SA_SERVICE_MANAGEMENT;
+
+create  table SA_SERVICE_MANAGEMENT 
+(SERVICE_MANAGEMENT_SID int identity (1,1) primary key, 
+                                   SERVICEIP varchar(100),
+                                   SERVICEUSER varchar(100),
+                                   SERVICEPASSWORD varchar(100),
+                                   databaseUSER varchar(100),
+                                   databasePASSWORD varchar(100),
+                                   K3USER varchar(100),
+                                   K3PASSWORD varchar(100),
+                                   SERVICEOWNER varchar(100),
+                                   FACTORY varchar(100),
+                                   MAC  VARCHAR(100),
+                                   DESCR varchar(100),
+                                   USERID varchar(100),
+                                   UPDATETIME varchar(100))
