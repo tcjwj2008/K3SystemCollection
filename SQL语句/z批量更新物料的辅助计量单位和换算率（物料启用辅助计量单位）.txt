@@ -1,0 +1,128 @@
+联达双计量单位  yLD_K3Data_SecUnit
+
+        1.SQL 批量更新物料的辅助计量单位和换算率
+        2.SQL 批量更新期初的辅助数量（ICBal和ICInvBal和POInvBal）
+        3.SQL 批量更新本期发生的物流单据的辅助数量
+        4.SQL 批量更新本期发生的非物流单据的辅助数量
+        5.SQL 校对即时库存(收料通知单会影响虚仓库存)
+
+
+        1.领料系统增加辅助计量数量
+        2.领料分配的时候进一法(将多余的领料分配到最后一张领料单)
+     ******************************************************************************/  
+
+        --1.批量更新物料的辅助计量单位和换算率
+        UPDATE  t1
+        SET     FSecUnitID = 60494
+              , FSecCoefficient = t3.[重量/块]
+        FROM    t_ICItemBase t1
+        INNER JOIN t_ICItem t2 ON t2.FItemID = t1.FItemID
+        INNER JOIN 铁板规格1 t3 ON t3.[代码] = t2.FNumber;
+
+
+        --2.批量更新期初的辅助数量(ICBal)
+        UPDATE  t1
+        SET     t1.FSecBegQty = t1.FBegQty / t2.FSecCoefficient
+               ,t1.FSecEndQty = t1.FSecEndQty / t2.FSecCoefficient
+               ,t1.FSecReceive = t1.FSecReceive / t2.FSecCoefficient
+               ,t1.FSecSend = t1.FSecSend / t2.FSecCoefficient
+               ,t1.FSecYtdReceive = t1.FSecYtdReceive / t2.FSecCoefficient
+               ,t1.FSecYtdSend = t1.FSecYtdSend / t2.FSecCoefficient
+        FROM    ICBal t1
+        INNER JOIN t_ICItem t2 ON t2.FItemID = t1.FItemID
+        WHERE 1=1
+        AND t1.FYear=2018
+        AND t1.FPeriod=8
+        AND t2.FSecCoefficient>0
+
+
+        --2.批量更新期初的辅助数量(ICInvBal)
+        UPDATE  t1
+        SET     t1.FSecBegQty = t1.FBegQty / t2.FSecCoefficient
+               ,t1.FSecEndQty = t1.FSecEndQty / t2.FSecCoefficient
+               ,t1.FSecReceive = t1.FSecReceive / t2.FSecCoefficient
+               ,t1.FSecSend = t1.FSecSend / t2.FSecCoefficient
+               ,t1.FSecYtdReceive = t1.FSecYtdReceive / t2.FSecCoefficient
+               ,t1.FSecYtdSend = t1.FSecYtdSend / t2.FSecCoefficient
+        FROM    ICInvBal t1
+        INNER JOIN t_ICItem t2 ON t2.FItemID = t1.FItemID
+        WHERE 1=1
+        AND t1.FYear=2018
+        AND t1.FPeriod=8
+        AND t2.FSecCoefficient>0
+
+
+        --2.批量更新期初的辅助数量(POInvBal)
+        UPDATE  t1
+        SET     t1.FSecBegQty = t1.FBegQty / t2.FSecCoefficient
+               ,t1.FSecEndQty = t1.FSecEndQty / t2.FSecCoefficient
+               ,t1.FSecReceive = t1.FSecReceive / t2.FSecCoefficient
+               ,t1.FSecSend = t1.FSecSend / t2.FSecCoefficient
+               ,t1.FSecYtdReceive = t1.FSecYtdReceive / t2.FSecCoefficient
+               ,t1.FSecYtdSend = t1.FSecYtdSend / t2.FSecCoefficient
+        FROM    POInvBal t1
+        INNER JOIN t_ICItem t2 ON t2.FItemID = t1.FItemID
+        WHERE 1=1
+        AND t1.FYear=2018
+        AND t1.FPeriod=8
+        AND t2.FSecCoefficient>0
+
+
+        --3.批量更新本期发生的物流单据的辅助数量
+        UPDATE  t1
+        SET     t1.FSecCoefficient = t2.FSecCoefficient
+               ,t1.FSecQty = t1.FQty / t2.FSecCoefficient
+               ,t1.FSecQtyMust= t1.FQtyMust / t2.FSecCoefficient
+               ,t1.FSecCommitQty= t1.FCommitQty / t2.FSecCoefficient
+               ,t1.FSecVWInStockQty= t1.FVWInStockQty / t2.FSecCoefficient
+               ,t1.FSecInvoiceQty= t1.FQtyInvoice / t2.FSecCoefficient
+               ,t1.FSecQtyActual= t1.FQtyActual / t2.FSecCoefficient
+               ,t1.FOutSecCommitQty= t1.FOutCommitQty / t2.FSecCoefficient
+        FROM    ICStockBillEntry t1
+        INNER JOIN t_ICItem t2 ON t2.FItemID = t1.FItemID
+        INNER JOIN ICStockBill t3 ON t3.FInterID = t1.FInterID
+        WHERE 1=1
+        AND CONVERT(NVARCHAR,t3.FDATE,112) BETWEEN '20180801' AND '20180931'
+        AND t2.FSecCoefficient>0
+
+
+        --4.批量更新本期发生的非物流单据的辅助数量
+        UPDATE  t1
+        SET     t1.FSecCoefficient = t2.FSecCoefficient
+               ,t1.FSecQty = t1.FQty / t2.FSecCoefficient
+               ,t1.FSecCommitQty= t1.FCommitQty / t2.FSecCoefficient
+               ,t1.FSecStockQty= t1.FStockQty / t2.FSecCoefficient
+               ,t1.FSecInvoiceQty= t1.FQtyInvoice / t2.FSecCoefficient
+               ,t1.FSecDeliveryQty= t1.FDeliveryQty / t2.FSecCoefficient
+        FROM    POOrderEntry t1
+        INNER JOIN t_ICItem t2 ON t2.FItemID = t1.FItemID
+        INNER JOIN POOrder t3 ON t3.FInterID = t1.FInterID
+        WHERE 1=1
+        AND CONVERT(NVARCHAR,t3.FDATE,112) BETWEEN '20180801' AND '20180931'
+        AND t2.FSecCoefficient>0
+
+
+        UPDATE  t1
+        SET     t1.FSecCoefficient = t2.FSecCoefficient
+               ,t1.FSecQty = t1.FQty / t2.FSecCoefficient
+               ,t1.FSecCommitQty= t1.FCommitQty / t2.FSecCoefficient
+               ,t1.FSecBackQty= t1.FBackQty / t2.FSecCoefficient
+               ,t1.FSecConCommitQty= t1.FConCommitQty / t2.FSecCoefficient
+               ,t1.FSecScrapQty= t1.FScrapQty / t2.FSecCoefficient
+               ,t1.FSecScrapInCommitQty= t1.FScrapInCommitQty / t2.FSecCoefficient
+               ,t1.FSecQtyPass= t1.FQtyPass / t2.FSecCoefficient
+               ,t1.FSecConPassQty= t1.FConPassQty / t2.FSecCoefficient
+               ,t1.FSecNotPassQty= t1.FNotPassQty / t2.FSecCoefficient
+               ,t1.FSecSampleBreakQty= t1.FSampleBreakQty / t2.FSecCoefficient
+               ,t1.FSecRelateQty= t1.FRelateQty / t2.FSecCoefficient
+               ,t1.FSecQCheckQty= t1.FQCheckQty / t2.FSecCoefficient
+        FROM    POInStockEntry t1
+        INNER JOIN t_ICItem t2 ON t2.FItemID = t1.FItemID
+        INNER JOIN POInStock t3 ON t3.FInterID = t1.FInterID
+        WHERE 1=1
+        AND CONVERT(NVARCHAR,t3.FDATE,112) BETWEEN '20180801' AND '20180931'
+        AND t2.FSecCoefficient>0
+
+
+        --5.校对即时库存
+        EXEC dbo.CheckInventory
