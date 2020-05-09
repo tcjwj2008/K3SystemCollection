@@ -1,0 +1,147 @@
+          
+CREATE PROCEDURE [dbo].[p_get_wssql] (@tabname varchar(100))            
+            
+AS            
+BEGIN            
+ -- SET NOCOUNT ON added to prevent extra result sets from            
+ -- interfering with SELECT statements.            
+ SET NOCOUNT ON;            
+ declare @colid int        
+ declare @name varchar(30)        
+            
+ declare @sql varchar(8000)            
+ declare @wheresql varchar(8000)          
+         
+ if OBJECT_ID('tempdb..#tab') is not null drop table #tab        
+ select colid,name         
+ into #tab        
+ from syscolumns         
+ where OBJECT_ID(@tabname) = id and name <> 'stamp'         
+         
+ print '---------------------传输头'         
+ set @sql = ''          
+ select @sql = "if object_id('tempdb..#ws_"+ @tabname + "') is not null drop table #ws_" + @tabname          
+ print @sql           
+           
+ set @sql = ''            
+ select @sql = @sql + ',' + name from syscolumns where OBJECT_ID(@tabname) = id and name <> 'stamp'            
+ set @sql = SUBSTRING(@sql,2,8000)            
+ select @sql = 'select top 0 ' + @sql + ' into #ws_' + @tabname + ' from ' + @tabname +'(nolock)'            
+ print @sql            
+       
+       
+ print '---------------------传输体'         
+ set @sql = ''            
+ select @sql = @sql +"+','+dbo.f_var_to_string("+ name + ")"   from syscolumns where OBJECT_ID(@tabname) = id and name <> 'stamp'            
+ set @sql = SUBSTRING(@sql,6,8000)           
+       
+      
+ select @sql = "select 'insert #ws_" + @tabname + " select '+ "+ @sql + " from " + @tabname + " where stamp > cast(cast($minserialno as bigint) as timestamp) and stamp <= cast(cast($maxserialno as bigint) as timestamp)"           
+ print @sql          
+         
+if OBJECT_ID('tempdb..#t') is not null drop table #t        
+select colname = convert(sysname,c.name),o.name,pkname = convert(sysname,i.name),          
+rowid = case when c.name = index_col(@tabname, i.indid,  1) then convert (smallint,1)          
+                when c.name = index_col(@tabname, i.indid,  2) then convert (smallint,2)          
+                when c.name = index_col(@tabname, i.indid,  3) then convert (smallint,3)          
+                when c.name = index_col(@tabname, i.indid,  4) then convert (smallint,4)          
+                when c.name = index_col(@tabname, i.indid,  5) then convert (smallint,5)          
+                when c.name = index_col(@tabname, i.indid,  6) then convert (smallint,6)          
+                when c.name = index_col(@tabname, i.indid,  7) then convert (smallint,7)          
+                when c.name = index_col(@tabname, i.indid,  8) then convert (smallint,8)          
+                when c.name = index_col(@tabname, i.indid,  9) then convert (smallint,9)          
+                when c.name = index_col(@tabname, i.indid, 10) then convert (smallint,10)          
+                when c.name = index_col(@tabname, i.indid, 11) then convert (smallint,11)          
+                when c.name = index_col(@tabname, i.indid, 12) then convert (smallint,12)          
+                when c.name = index_col(@tabname, i.indid, 13) then convert (smallint,13)          
+                when c.name = index_col(@tabname, i.indid, 14) then convert (smallint,14)          
+                when c.name = index_col(@tabname, i.indid, 15) then convert (smallint,15)          
+                when c.name = index_col(@tabname, i.indid, 16) then convert (smallint,16)          
+        end          
+into #t        
+from sysindexes i, syscolumns c, sysobjects o           
+where o.id = OBJECT_ID(@tabname) and o.id = c.id and o.id = i.id and (i.status & 0x800) = 0x800          
+and (c.name = index_col (@tabname, i.indid,  1) or          
+     c.name = index_col (@tabname, i.indid,  2) or          
+     c.name = index_col (@tabname, i.indid,  3) or          
+     c.name = index_col (@tabname, i.indid,  4) or          
+     c.name = index_col (@tabname, i.indid,  5) or          
+     c.name = index_col (@tabname, i.indid,  6) or          
+     c.name = index_col (@tabname, i.indid,  7) or          
+     c.name = index_col (@tabname, i.indid,  8) or          
+     c.name = index_col (@tabname, i.indid,  9) or          
+     c.name = index_col (@tabname, i.indid, 10) or          
+     c.name = index_col (@tabname, i.indid, 11) or          
+     c.name = index_col (@tabname, i.indid, 12) or          
+     c.name = index_col (@tabname, i.indid, 13) or          
+     c.name = index_col (@tabname, i.indid, 14) or          
+     c.name = index_col (@tabname, i.indid, 15) or          
+     c.name = index_col (@tabname, i.indid, 16)          
+    )          
+         
+     print '---------------------传输脚 update'          
+  set @sql = 'update '+@tabname + ' set '        
+  print @sql        
+          
+  set @sql = ''        
+        
+        
+          
+     declare tab_cursor cursor for select name from #tab  where name not in (select colname from #t) order by colid          
+     open tab_cursor          
+          
+     fetch next from tab_cursor into @name        
+     while @@fetch_status >= 0          
+       begin           
+         select @sql = @sql + @name + ' = b.'  +@name +','+ CHAR(13)        
+         fetch next from tab_cursor into @name          
+       end          
+             
+  close tab_cursor          
+     deallocate tab_cursor         
+             
+    print left(@sql ,len(@sql)-2)        
+    set @sql = 'from '+@tabname + ' a ,#ws_'+@tabname + ' b '        
+    print @sql        
+            
+    set @wheresql = ''        
+        
+  --条件        
+     declare tab_cursor cursor for select colname from #t order by rowid          
+     open tab_cursor          
+          
+     fetch next from tab_cursor into @name        
+     while @@fetch_status >= 0          
+       begin           
+         select @wheresql = @wheresql + 'b.'+@name + ' = a.'  +@name  + ' and '        
+         fetch next from tab_cursor into @name          
+       end          
+             
+  close tab_cursor          
+     deallocate tab_cursor         
+            
+    if @wheresql > ''        
+    begin        
+  print 'where '        
+  set @wheresql = LEFT(@wheresql,len(@wheresql)-4)        
+  print @wheresql        
+    end        
+  print '---------------------传输脚 insert'         
+    set @sql = 'insert into '+@tabname +'('        
+    print @sql        
+            
+    set @sql = ''        
+    select @sql = @sql + name + ',' from syscolumns where OBJECT_ID(@tabname) = id and name <> 'stamp'        
+    print left(@sql ,len(@sql) - 1)        
+    print ')'            
+    print 'select '        
+    print left(@sql ,len(@sql) - 1)        
+    print 'from #ws_'+@tabname +' a'        
+    if @wheresql > ''        
+    begin        
+  print 'where not exists(select 1 from '+@tabname +' b where '        
+  print @wheresql        
+  print ')'        
+    end        
+            
+END 
