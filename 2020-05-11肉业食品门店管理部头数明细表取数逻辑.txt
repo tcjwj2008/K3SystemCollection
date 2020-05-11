@@ -1,0 +1,66 @@
+USE [YXERP];
+GO
+SET ANSI_NULLS ON;
+GO
+SET QUOTED_IDENTIFIER ON;
+GO
+alter   PROC [dbo].[sp_sel_rsjybmdts_qiu] -- [sp_sel_rsjybmdts_qiu] '2020-05-01','10.11'
+    (
+      @FDate VARCHAR(100) ,   --开始日期            
+      @fdepnumber VARCHAR(100)--部门代码  
+    )
+AS
+   
+    BEGIN  
+        DECLARE   @EndDate2 VARCHAR(100);
+        SET @EndDate2 = CONVERT(VARCHAR(100), DATEADD(DAY, 1,
+                                                  CONVERT(DATETIME, @FDate)));
+
+        SELECT CONVERT(VARCHAR(100), a.deliverydate, 23) AS 发货日期,
+               a.deliverycode AS 发货单,
+               b.productcode AS 物料代码,
+               b.productname AS 物料名称,
+               b.storagename AS 仓库,
+               b.quantity AS 头数
+        FROM    ( SELECT    deliverydate ,
+                            deliverycode
+                  FROM      CON12.yrtzdata.dbo.TZ_XS_delivery2020
+                  WHERE     ( fhclientcode LIKE 'R09.0004.%'
+                              OR fhclientname LIKE 'S%'
+                            )
+                            AND storagename = '白条库'
+                ) a ,
+                CON12.yrtzdata.dbo.TZ_XS_deliveryinfo2020 b
+        WHERE   a.deliverycode = b.deliverycode
+                AND a.deliverydate BETWEEN @FDate AND @EndDate2
+                AND b.productcode NOT LIKE '7.1.02%'
+                AND b.productcode NOT LIKE '8.8.02.02%'
+                AND b.productcode NOT LIKE '8.8.03.02%'
+                
+        UNION ALL 
+        
+          SELECT CONVERT(VARCHAR(100), a.deliverydate, 23) AS 发货日期,
+               '' AS 发货单,
+               ''  AS 物料代码,
+               '' AS 物料名称,
+               ''  AS 仓库,
+               SUM(b.quantity) AS 头数
+        FROM    ( SELECT    deliverydate ,
+                            deliverycode
+                  FROM      CON12.yrtzdata.dbo.TZ_XS_delivery2020
+                  WHERE     ( fhclientcode LIKE 'R09.0004.%'
+                              OR fhclientname LIKE 'S%'
+                            )
+                            AND storagename = '白条库'
+                ) a ,
+                CON12.yrtzdata.dbo.TZ_XS_deliveryinfo2020 b
+        WHERE   a.deliverycode = b.deliverycode
+                AND a.deliverydate BETWEEN @FDate AND @EndDate2
+                AND b.productcode NOT LIKE '7.1.02%'
+                AND b.productcode NOT LIKE '8.8.02.02%'
+                AND b.productcode NOT LIKE '8.8.03.02%'
+                
+        GROUP BY CONVERT(VARCHAR(100), a.deliverydate, 23);
+  
+    END; 
+

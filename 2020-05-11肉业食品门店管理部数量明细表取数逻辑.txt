@@ -1,0 +1,67 @@
+USE [YXERP];
+GO
+SET ANSI_NULLS ON;
+GO
+SET QUOTED_IDENTIFIER ON;
+GO
+ALTER   PROC [dbo].[sp_sel_rsjybmdsl_qiu] -- [sp_sel_rsjybmdsl_qiu] '2020-05-02','10.11'
+    (
+      @FDate VARCHAR(100) ,   --开始日期            
+      @fdepnumber VARCHAR(100)--部门代码  
+    )
+AS
+    BEGIN  
+        DECLARE @EndDate2 VARCHAR(100);
+        SET @EndDate2 = CONVERT(VARCHAR(100), DATEADD(DAY, 1,
+                                                      CONVERT(DATETIME, @FDate)));
+
+        SELECT  CONVERT(VARCHAR(100), a.deliverydate, 23) AS 发货日期 ,
+                a.deliverycode AS 发货单 ,
+                b.productcode AS 物料代码 ,
+                b.productname AS 物料名称 ,
+                b.storagename AS 仓库 ,
+                b.weight AS 数量
+                INTO #ttt
+        FROM    ( SELECT    deliverydate ,
+                            deliverycode
+                  FROM      CON12.yrtzdata.dbo.TZ_XS_delivery2020
+                  WHERE     ( fhclientcode LIKE 'R09.0004.%' )
+                            OR fhclientname LIKE 'S%'
+                ) a ,
+                CON12.yrtzdata.dbo.TZ_XS_deliveryinfo2020 b
+        WHERE   a.deliverycode = b.deliverycode
+                AND a.deliverydate BETWEEN @FDate AND @EndDate2
+                AND b.productcode NOT LIKE '7.1.02%'
+                AND b.productcode NOT LIKE '8.8.02.02%'
+                AND b.productcode NOT LIKE '8.8.03.02%'
+       
+        INSERT INTO #ttt
+                ( 发货日期,发货单, 物料代码, 物料名称, 仓库, 数量 )
+     
+        
+        SELECT  CONVERT(VARCHAR(100), v1.FDate, 23) AS 发货日期 ,
+       v1.FBillNo AS 发货单,
+       t12.FNumber AS 物料代码,
+       t12.fname AS 物料名称,
+       t1.fname AS 仓库,
+                (u1.FAuxQty) AS 数量
+        FROM    AIS_YXSP2.dbo.ICStockBill v1
+                INNER JOIN AIS_YXSP2.dbo.ICStockBillEntry u1 ON v1.FInterID = u1.FInterID
+                                                              AND u1.FInterID <> 0
+                INNER JOIN AIS_YXSP2.dbo.t_ICItem t12 ON u1.FItemID = t12.FItemID
+                                                         AND t12.FItemID <> 0
+                                                         LEFT JOIN
+                                                         AIS_YXSP2.dbo.t_stock  t1 ON u1.FSCStockID=t1.fitemid
+                                                         
+        WHERE   1 = 1
+                AND ( v1.FDate BETWEEN @FDate AND @EndDate2
+                      AND ISNULL(t12.FNumber, '') LIKE '8.8%'
+                    )
+                AND ( v1.FTranType = 29 )
+      
+      SELECT 发货日期,发货单, 物料代码, 物料名称, 仓库, 数量 FROM #ttt
+      UNION ALL
+      SELECT 发货日期,'', '', '', '', SUM(数量) FROM #ttt GROUP BY 发货日期
+  
+    END; 
+
