@@ -1,0 +1,1536 @@
+USE [YXERP]
+GO
+/****** Object:  StoredProcedure [dbo].[sp_sel_rsjyb_New_qiu]    Script Date: 05/11/2020 13:47:10 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+ALTER     PROC [dbo].[sp_sel_rsjyb_New_qiu]--sp_sel_rsjyb_New_qiu '2020-05-01','2020-05-01','',1
+    (
+      @BegDate VARCHAR(100) ,      --开始日期                
+      @EndDate VARCHAR(100) ,      --结束日期       
+      @fdepnumber VARCHAR(100) ,   --部门代码 
+      @fType VARCHAR(2)            --特殊过滤  
+    )
+AS
+    DECLARE @BegDate1 VARCHAR(100) , --开始日期                
+        @EndDate1 VARCHAR(100) ,     --结束日期       
+        @fdepnumber1 VARCHAR(100) ,  --部门代码 
+        @fType1 VARCHAR(2) ,         --特殊过滤 
+        @DiffCount INT ,             --日期相差天数=结束日期-开始日期,
+        @EndDate2 VARCHAR(100);
+    SET @EndDate2 = CONVERT(VARCHAR(100), DATEADD(DAY, 1,
+                                                  CONVERT(DATETIME, @EndDate)));
+    SELECT  @DiffCount = 1;
+    IF ( @BegDate = @EndDate )       --如果开始日期＝结束日期，只查询一天
+        SELECT  @DiffCount = 0;      --查当天赋值
+    
+    SELECT  @BegDate1 = @BegDate ,
+            @EndDate1 = @EndDate ,
+            @fdepnumber1 = @fdepnumber ,
+            @fType1 = @fType;
+    
+    SELECT  @fType = '1';   --取消过滤
+    
+  
+--从肉业取数       
+    SELECT  'R' AS ztname ,
+            v.FDate ,
+            w.FNumber AS wnumber ,
+            t.FNumber AS dnumber ,
+            CASE t.FNumber
+              WHEN '10.12' THEN u.FSecQty
+              WHEN '10.13' THEN u.FSecQty
+              ELSE 0.0000
+            END FSecQty ,
+            FAuxQty ,
+            FConsignPrice ,
+            FConsignAmount ,
+            ISNULL(p.Fprice, 0.000) AS fCBprice
+    INTO    #rsjybmx
+    FROM    AIS_YXRY2.dbo.ICStockBillEntry u
+            INNER JOIN AIS_YXRY2.dbo.ICStockBill v ON v.FInterID = u.FInterID
+            INNER JOIN AIS_YXRY2.dbo.t_Item w ON w.FItemID = u.FItemID
+                                                 AND FItemClassID = 4
+            LEFT JOIN AIS_YXRY2.dbo.t_Department t ON t.FItemID = v.FDeptID
+            LEFT JOIN yx_rs_ysprice p ON p.Fnumber = w.FNumber
+                                         AND p.FDATE = v.FDate
+            LEFT JOIN AIS_YXRY2.dbo.t_Stock s ON s.FItemID = u.FDCStockID
+    WHERE   v.FTranType = 21
+            AND v.FCancellation = 0
+            AND v.FDate BETWEEN @BegDate1 AND @EndDate1
+            AND t.FNumber >= '10.12'
+            AND t.FNumber <= '10.18'
+            AND t.FNumber <> '10.14'
+            AND CHARINDEX('号', s.FName) = 0
+            --过滤冻品7.1.02……、8.8.02.02……、8.8.03.02
+            AND w.FNumber NOT LIKE '7.1.02%'
+            AND w.FNumber NOT LIKE '8.8.02.02%'
+            AND w.FNumber NOT LIKE '8.8.03.02%';    
+  
+  
+--从肉业取数, 加入10.19   
+    INSERT  INTO #rsjybmx
+            ( ztname ,
+              FDate ,
+              wnumber ,
+              dnumber ,
+              FSecQty ,
+              FAuxQty ,
+              FConsignPrice ,
+              FConsignAmount ,
+              fCBprice
+            )
+            SELECT  'R' AS ztname ,
+                    v.FDate ,
+                    w.FNumber AS wnumber ,
+                    t.FNumber AS dnumber ,
+                    CASE t.FNumber
+                      WHEN '10.12' THEN u.FSecQty
+                      WHEN '10.13' THEN u.FSecQty
+                      ELSE 0.0000
+                    END FSecQty ,
+                    FQty ,
+                    FConsignPrice ,
+                    FConsignAmount ,
+                    ISNULL(p.Fprice, 0.000) AS fCBprice
+            FROM    AIS_YXRY2.dbo.ICStockBillEntry u
+                    INNER JOIN AIS_YXRY2.dbo.ICStockBill v ON v.FInterID = u.FInterID
+                    INNER JOIN AIS_YXRY2.dbo.t_Item w ON w.FItemID = u.FItemID
+                                                         AND FItemClassID = 4
+                    LEFT JOIN AIS_YXRY2.dbo.t_Department t ON t.FItemID = v.FDeptID
+                    LEFT JOIN yx_rs_ysprice p ON p.Fnumber = w.FNumber
+                                                 AND p.FDATE = v.FDate
+                    LEFT JOIN AIS_YXRY2.dbo.t_Stock s ON s.FItemID = u.FDCStockID
+            WHERE   v.FTranType = 21
+                    AND v.FCancellation = 0
+                    AND v.FDate BETWEEN @BegDate1 AND @EndDate1
+                    AND t.FNumber = '10.19'
+                    AND CHARINDEX('号', s.FName) = 0
+                    AND CHARINDEX('小副', t.FName) > 0
+            --过滤冻品7.1.02……、8.8.02.02……、8.8.03.02
+                    AND w.FNumber NOT LIKE '7.1.02%'
+                    AND w.FNumber NOT LIKE '8.8.02.02%'
+                    AND w.FNumber NOT LIKE '8.8.03.02%'; 
+
+--从肉业取数, 加入10.20   
+    INSERT  INTO #rsjybmx
+            ( ztname ,
+              FDate ,
+              wnumber ,
+              dnumber ,
+              FSecQty ,
+              FAuxQty ,
+              FConsignPrice ,
+              FConsignAmount ,
+              fCBprice
+            )
+            SELECT  'R' AS ztname ,
+                    v.FDate ,
+                    w.FNumber AS wnumber ,
+                    t.FNumber AS dnumber ,
+                    CASE t.FNumber
+                      WHEN '10.12' THEN u.FSecQty
+                      WHEN '10.13' THEN u.FSecQty
+                      ELSE 0.0000
+                    END FSecQty ,
+                    FQty ,
+                    FConsignPrice ,
+                    FConsignAmount ,
+                    ISNULL(p.Fprice, 0.000) AS fCBprice
+            FROM    AIS_YXRY2.dbo.ICStockBillEntry u
+                    INNER JOIN AIS_YXRY2.dbo.ICStockBill v ON v.FInterID = u.FInterID
+                    INNER JOIN AIS_YXRY2.dbo.t_Item w ON w.FItemID = u.FItemID
+                                                         AND FItemClassID = 4
+                    LEFT JOIN AIS_YXRY2.dbo.t_Department t ON t.FItemID = v.FDeptID
+                    LEFT JOIN yx_rs_ysprice p ON p.Fnumber = w.FNumber
+                                                 AND p.FDATE = v.FDate
+                    LEFT JOIN AIS_YXRY2.dbo.t_Stock s ON s.FItemID = u.FDCStockID
+            WHERE   v.FTranType = 21
+                    AND v.FCancellation = 0
+                    AND v.FDate BETWEEN @BegDate1 AND @EndDate1
+                    AND t.FNumber = '10.20'
+                    AND CHARINDEX('号', s.FName) = 0
+                    
+            --过滤冻品7.1.02……、8.8.02.02……、8.8.03.02
+                    AND w.FNumber NOT LIKE '7.1.02%'
+                    AND w.FNumber NOT LIKE '8.8.02.02%'
+                    AND w.FNumber NOT LIKE '8.8.03.02%'; 
+                    
+                    
+
+--从肉业取数, 加入10.21   
+    INSERT  INTO #rsjybmx
+            ( ztname ,
+              FDate ,
+              wnumber ,
+              dnumber ,
+              FSecQty ,
+              FAuxQty ,
+              FConsignPrice ,
+              FConsignAmount ,
+              fCBprice
+            )
+            SELECT  'R' AS ztname ,
+                    v.FDate ,
+                    w.FNumber AS wnumber ,
+                    t.FNumber AS dnumber ,
+                    CASE t.FNumber
+                      WHEN '10.12' THEN u.FSecQty
+                      WHEN '10.13' THEN u.FSecQty
+                      ELSE 0.0000
+                    END FSecQty ,
+                    FQty ,
+                    FConsignPrice ,
+                    FConsignAmount ,
+                    ISNULL(p.Fprice, 0.000) AS fCBprice
+            FROM    AIS_YXRY2.dbo.ICStockBillEntry u
+                    INNER JOIN AIS_YXRY2.dbo.ICStockBill v ON v.FInterID = u.FInterID
+                    INNER JOIN AIS_YXRY2.dbo.t_Item w ON w.FItemID = u.FItemID
+                                                         AND FItemClassID = 4
+                                                         AND w.FNumber NOT LIKE '8%'
+                    LEFT JOIN AIS_YXRY2.dbo.t_Department t ON t.FItemID = v.FDeptID
+                    LEFT JOIN yx_rs_ysprice p ON p.Fnumber = w.FNumber
+                                                 AND p.FDATE = v.FDate
+                    LEFT JOIN AIS_YXRY2.dbo.t_Stock s ON s.FItemID = u.FDCStockID
+            WHERE   v.FTranType = 21
+                    AND v.FCancellation = 0
+                    AND v.FDate BETWEEN @BegDate1 AND @EndDate1
+                    AND t.FNumber = '10.21'
+                    AND CHARINDEX('号', s.FName) = 0
+              --过滤冻品7.1.02……、8.8.02.02……、8.8.03.02
+                    AND w.FNumber NOT LIKE '7.1.02%'
+                    AND w.FNumber NOT LIKE '8.8.02.02%'
+                    AND w.FNumber NOT LIKE '8.8.03.02%';
+                    
+                     
+   
+
+--从食品取数      
+    INSERT  INTO #rsjybmx
+            ( ztname ,
+              FDate ,
+              wnumber ,
+              dnumber ,
+              FSecQty ,
+              FAuxQty ,
+              FConsignPrice ,
+              FConsignAmount ,
+              fCBprice
+            )
+            SELECT  'S' AS ztname ,
+                    v.FDate ,
+                    w.FNumber AS wnumber ,
+                    t.FNumber AS dnumber ,
+                    CASE t.FNumber
+                      WHEN '10.12' THEN u.FSecQty
+                      WHEN '10.13' THEN u.FSecQty
+                      ELSE 0.0000
+                    END FSecQty ,
+                    FAuxQty ,
+                    FConsignPrice ,
+                    FConsignAmount ,
+                    ISNULL(p.Fprice, 0.000) AS fCBprice
+            FROM    AIS_YXSP2.dbo.ICStockBillEntry u
+                    INNER JOIN AIS_YXSP2.dbo.ICStockBill v ON v.FInterID = u.FInterID
+                    INNER JOIN AIS_YXSP2.dbo.t_Item w ON w.FItemID = u.FItemID
+                                                         AND FItemClassID = 4
+                    LEFT JOIN AIS_YXSP2.dbo.t_Department t ON t.FItemID = v.FDeptID
+                    LEFT JOIN yx_rs_ysprice p ON p.Fnumber = w.FNumber
+                                                 AND p.FDATE = v.FDate
+                    LEFT JOIN AIS_YXSP2.dbo.t_Stock s ON s.FItemID = u.FDCStockID
+            WHERE   v.FTranType = 21
+                    AND v.FCancellation = 0
+                    AND v.FDate BETWEEN @BegDate1 AND @EndDate1
+                    AND t.FNumber >= '10.12'
+                    AND t.FNumber <= '10.18'
+                    AND t.FNumber <> '10.14'
+                    AND CHARINDEX('号', s.FName) = 0
+             --过滤冻品7.1.02……、8.8.02.02……、8.8.03.02
+                    AND w.FNumber NOT LIKE '7.1.02%'
+                    AND w.FNumber NOT LIKE '8.8.02.02%'
+                    AND w.FNumber NOT LIKE '8.8.03.02%';  
+                      
+
+    INSERT  INTO #rsjybmx
+            ( ztname ,
+              FDate ,
+              wnumber ,
+              dnumber ,
+              FSecQty ,
+              FAuxQty ,
+              FConsignPrice ,
+              FConsignAmount ,
+              fCBprice
+            )
+            SELECT  'S' AS ztname ,
+                    v.FDate ,
+                    w.FNumber AS wnumber ,
+                    t.FNumber AS dnumber ,
+                    CASE t.FNumber
+                      WHEN '10.12' THEN u.FSecQty
+                      WHEN '10.13' THEN u.FSecQty
+                      ELSE 0.0000
+                    END FSecQty ,
+                    FAuxQty ,
+                    FConsignPrice ,
+                    FConsignAmount ,
+                    ISNULL(p.Fprice, 0.000) AS fCBprice
+            FROM    AIS_YXSP2.dbo.ICStockBillEntry u
+                    INNER JOIN AIS_YXSP2.dbo.ICStockBill v ON v.FInterID = u.FInterID
+                    INNER JOIN AIS_YXSP2.dbo.t_Item w ON w.FItemID = u.FItemID
+                                                         AND FItemClassID = 4
+                    LEFT JOIN AIS_YXSP2.dbo.t_Department t ON t.FItemID = v.FDeptID
+                    LEFT JOIN yx_rs_ysprice p ON p.Fnumber = w.FNumber
+                                                 AND p.FDATE = v.FDate
+                    LEFT JOIN AIS_YXSP2.dbo.t_Stock s ON s.FItemID = u.FDCStockID
+            WHERE   v.FTranType = 21
+                    AND v.FCancellation = 0
+                    AND v.FDate BETWEEN @BegDate1 AND @EndDate1
+                    AND t.FNumber = '10.20'
+                    AND CHARINDEX('号', s.FName) = 0
+                    
+                    --过滤冻品7.1.02……、8.8.02.02……、8.8.03.02
+                    AND w.FNumber NOT LIKE '7.1.02%'
+                    AND w.FNumber NOT LIKE '8.8.02.02%'
+                    AND w.FNumber NOT LIKE '8.8.03.02%';    
+
+
+    INSERT  INTO #rsjybmx
+            ( ztname ,
+              FDate ,
+              wnumber ,
+              dnumber ,
+              FSecQty ,
+              FAuxQty ,
+              FConsignPrice ,
+              FConsignAmount ,
+              fCBprice
+            )
+            SELECT  'S' AS ztname ,
+                    v.FDate ,
+                    w.FNumber AS wnumber ,
+                    t.FNumber AS dnumber ,
+                    CASE t.FNumber
+                      WHEN '10.12' THEN u.FSecQty
+                      WHEN '10.13' THEN u.FSecQty
+                      ELSE 0.0000
+                    END FSecQty ,
+                    FAuxQty ,
+                    FConsignPrice ,
+                    FConsignAmount ,
+                    ISNULL(p.Fprice, 0.000) AS fCBprice
+            FROM    AIS_YXSP2.dbo.ICStockBillEntry u
+                    INNER JOIN AIS_YXSP2.dbo.ICStockBill v ON v.FInterID = u.FInterID
+                    INNER JOIN AIS_YXSP2.dbo.t_Item w ON w.FItemID = u.FItemID
+                                                         AND FItemClassID = 4
+                                                         AND w.FNumber NOT LIKE '8.%'
+                    LEFT JOIN AIS_YXSP2.dbo.t_Department t ON t.FItemID = v.FDeptID
+                    LEFT JOIN yx_rs_ysprice p ON p.Fnumber = w.FNumber
+                                                 AND p.FDATE = v.FDate
+                    LEFT JOIN AIS_YXSP2.dbo.t_Stock s ON s.FItemID = u.FDCStockID
+            WHERE   v.FTranType = 21
+                    AND v.FCancellation = 0
+                    AND v.FDate BETWEEN @BegDate1 AND @EndDate1
+                    AND t.FNumber = '10.21'
+                    AND CHARINDEX('号', s.FName) = 0
+                    --过滤冻品7.1.02……、8.8.02.02……、8.8.03.02
+                    AND w.FNumber NOT LIKE '7.1.02%'
+                    AND w.FNumber NOT LIKE '8.8.02.02%'
+                    AND w.FNumber NOT LIKE '8.8.03.02%';  
+
+
+ 
+   
+    ALTER TABLE #rsjybmx ADD FCBAmount FLOAT;       
+      
+      
+---分类计算收入成本      
+--成本和收入列需要计算 
+--肉业部门为 10.12 10.13的 收入直接计算 成本/Ｘ         
+    UPDATE  #rsjybmx       
+    SET     FConsignAmount = FConsignAmount ,
+            FCBAmount = ROUND(FAuxQty * fCBprice / 0.91, 2)
+    WHERE   ztname = 'R'
+            AND dnumber IN ( '10.12', '10.13' );      
+--食品部门为 10.12 10.13的 收入直接计算 成本/Ｘ      
+    UPDATE  #rsjybmx
+    SET     FConsignAmount = FConsignAmount ,
+            FCBAmount = ROUND(FAuxQty * fCBprice / 0.91, 2)
+    WHERE   ztname = 'S'
+            AND dnumber IN ( '10.12', '10.13' );      
+--其他 收入/1.13 成本直接计算      
+    UPDATE  #rsjybmx
+    SET     FConsignAmount = ROUND(FConsignAmount / 1.09, 2) ,
+            FCBAmount = ROUND(FAuxQty * fCBprice, 2)
+    WHERE   dnumber NOT  IN ( '10.12', '10.13' );    
+
+  
+
+    SELECT  CONVERT(VARCHAR(100), a.FDate, 23) 日期 ,
+            a.dnumber 部门代码 ,
+            d.FName 部门名称 ,
+            CONVERT(NUMERIC(10, 2), ROUND(SUM(FSecQty), 2)) 头数 ,
+            CONVERT(NUMERIC(10, 2), ROUND(SUM(FAuxQty), 2)) 数量 ,
+            CONVERT(NUMERIC(10, 2), ROUND(SUM(FConsignAmount), 2)) 收入 ,
+            CONVERT(NUMERIC(10, 2), ROUND(SUM(FCBAmount), 2)) 成本       
+    INTO    #rsjyb
+    FROM    #rsjybmx a
+            LEFT JOIN AIS_YXRY2.dbo.t_Department d ON d.FNumber = a.dnumber
+    GROUP BY a.FDate ,
+            a.dnumber ,
+            d.FName
+    ORDER BY a.FDate ,
+            a.dnumber;      
+       
+    UPDATE  #rsjyb
+    SET     收入 = 收入 + ISNULL(t1.FAmountFor_2, 0.00) + ISNULL(t2.FAmountFor_2,
+                                                             0.00)
+    FROM    #rsjyb a
+            LEFT  JOIN (--肉业
+                         SELECT AIS_YXRY2.dbo.t_Department.FNumber AS 部门代码 ,
+                                CONVERT(VARCHAR(100), AIS_YXRY2.dbo.t_RP_ARPBill.FDate, 23) AS 日期 ,
+                                ISNULL(SUM(ROUND(ISNULL(AIS_YXRY2.dbo.t_RP_Plan_Ar.FAmountFor,
+                                                        0),
+                                                 AIS_YXRY2.dbo.t_Currency.FScale)),
+                                       0.00) AS FAmountFor_2
+                         FROM   AIS_YXRY2.dbo.t_RP_ARPBill
+                                LEFT JOIN AIS_YXRY2.dbo.t_RP_Plan_Ar ON AIS_YXRY2.dbo.t_RP_ARPBill.FBillID = AIS_YXRY2.dbo.t_RP_Plan_Ar.FBillID
+                                                              AND AIS_YXRY2.dbo.t_RP_Plan_Ar.FIsInit = 0
+                                LEFT  JOIN AIS_YXRY2.dbo.t_Currency ON AIS_YXRY2.dbo.t_RP_ARPBill.FCurrencyID = AIS_YXRY2.dbo.t_Currency.FCurrencyID
+                                                              AND AIS_YXRY2.dbo.t_Currency.FCurrencyID <> 0
+                                LEFT  JOIN AIS_YXRY2.dbo.t_Department ON AIS_YXRY2.dbo.t_RP_ARPBill.FDepartment = AIS_YXRY2.dbo.t_Department.FItemID
+                                                              AND AIS_YXRY2.dbo.t_Department.FItemID <> 0
+                         WHERE  ( DATEDIFF(DAY, @BegDate1,
+                                           AIS_YXRY2.dbo.t_RP_ARPBill.FDate) >= 0
+                                  AND DATEDIFF(DAY, @EndDate1,
+                                               AIS_YXRY2.dbo.t_RP_ARPBill.FDate) <= 0
+                                  AND AIS_YXRY2.dbo.t_Department.FNumber IN (
+                                  '10.12', '10.13' )
+                                )
+                                AND AIS_YXRY2.dbo.t_RP_ARPBill.FClassTypeID = 1000021
+                         GROUP BY AIS_YXRY2.dbo.t_Department.FNumber ,
+                                CONVERT(VARCHAR(100), AIS_YXRY2.dbo.t_RP_ARPBill.FDate, 23)
+                       ) t1 ON t1.部门代码 = a.部门代码
+                               AND t1.日期 = a.日期
+            LEFT  JOIN (--食品
+                         SELECT AIS_YXSP2.dbo.t_Department.FNumber AS 部门代码 ,
+                                CONVERT(VARCHAR(100), AIS_YXSP2.dbo.t_RP_ARPBill.FDate, 23) AS 日期 ,
+                                ISNULL(SUM(ROUND(ISNULL(AIS_YXSP2.dbo.t_RP_Plan_Ar.FAmountFor,
+                                                        0),
+                                                 AIS_YXSP2.dbo.t_Currency.FScale)),
+                                       0.00) AS FAmountFor_2
+                         FROM   AIS_YXSP2.dbo.t_RP_ARPBill
+                                LEFT JOIN AIS_YXSP2.dbo.t_RP_Plan_Ar ON AIS_YXSP2.dbo.t_RP_ARPBill.FBillID = AIS_YXSP2.dbo.t_RP_Plan_Ar.FBillID
+                                                              AND AIS_YXSP2.dbo.t_RP_Plan_Ar.FIsInit = 0
+                                LEFT  JOIN AIS_YXSP2.dbo.t_Currency ON AIS_YXSP2.dbo.t_RP_ARPBill.FCurrencyID = AIS_YXSP2.dbo.t_Currency.FCurrencyID
+                                                              AND AIS_YXSP2.dbo.t_Currency.FCurrencyID <> 0
+                                LEFT  JOIN AIS_YXSP2.dbo.t_Department ON AIS_YXSP2.dbo.t_RP_ARPBill.FDepartment = AIS_YXSP2.dbo.t_Department.FItemID
+                                                              AND AIS_YXSP2.dbo.t_Department.FItemID <> 0
+                         WHERE  ( DATEDIFF(DAY, @BegDate1,
+                                           AIS_YXSP2.dbo.t_RP_ARPBill.FDate) >= 0
+                                  AND DATEDIFF(DAY, @EndDate1,
+                                               AIS_YXSP2.dbo.t_RP_ARPBill.FDate) <= 0
+                                  AND AIS_YXSP2.dbo.t_Department.FNumber IN (
+                                  '10.12', '10.13' )
+                                )
+                                AND AIS_YXSP2.dbo.t_RP_ARPBill.FClassTypeID = 1000021
+                         GROUP BY AIS_YXSP2.dbo.t_Department.FNumber ,
+                                CONVERT(VARCHAR(100), AIS_YXSP2.dbo.t_RP_ARPBill.FDate, 23)
+                       ) t2 ON t2.部门代码 = a.部门代码
+                               AND t2.日期 = a.日期
+    WHERE   a.部门代码 IN ( '10.12', '10.13' );
+ 
+ 
+    UPDATE  #rsjyb
+    SET     收入 = 收入 + ISNULL(t1.FAmountFor_2 / 1.09, 0.00)
+            + ISNULL(t2.FAmountFor_2 / 1.09, 0.00)
+    FROM    #rsjyb a
+            LEFT  JOIN (--肉业
+                         SELECT AIS_YXRY2.dbo.t_Department.FNumber AS 部门代码 ,
+                                CONVERT(VARCHAR(100), AIS_YXRY2.dbo.t_RP_ARPBill.FDate, 23) AS 日期 ,
+                                ISNULL(SUM(ROUND(ISNULL(AIS_YXRY2.dbo.t_RP_Plan_Ar.FAmountFor,
+                                                        0),
+                                                 AIS_YXRY2.dbo.t_Currency.FScale)),
+                                       0.00) AS FAmountFor_2
+                         FROM   AIS_YXRY2.dbo.t_RP_ARPBill
+                                LEFT JOIN AIS_YXRY2.dbo.t_RP_Plan_Ar ON AIS_YXRY2.dbo.t_RP_ARPBill.FBillID = AIS_YXRY2.dbo.t_RP_Plan_Ar.FBillID
+                                                              AND AIS_YXRY2.dbo.t_RP_Plan_Ar.FIsInit = 0
+                                LEFT  JOIN AIS_YXRY2.dbo.t_Currency ON AIS_YXRY2.dbo.t_RP_ARPBill.FCurrencyID = AIS_YXRY2.dbo.t_Currency.FCurrencyID
+                                                              AND AIS_YXRY2.dbo.t_Currency.FCurrencyID <> 0
+                                LEFT  JOIN AIS_YXRY2.dbo.t_Department ON AIS_YXRY2.dbo.t_RP_ARPBill.FDepartment = AIS_YXRY2.dbo.t_Department.FItemID
+                                                              AND AIS_YXRY2.dbo.t_Department.FItemID <> 0
+                         WHERE  ( DATEDIFF(DAY, @BegDate1,
+                                           AIS_YXRY2.dbo.t_RP_ARPBill.FDate) >= 0
+                                  AND DATEDIFF(DAY, @EndDate1,
+                                               AIS_YXRY2.dbo.t_RP_ARPBill.FDate) <= 0
+                                  AND AIS_YXRY2.dbo.t_Department.FNumber IN (
+                                  '10.15', '10.16', '10.17', '10.19', '10.20',
+                                  '10.21' )
+                                )
+                                AND AIS_YXRY2.dbo.t_RP_ARPBill.FClassTypeID = 1000021
+                         GROUP BY AIS_YXRY2.dbo.t_Department.FNumber ,
+                                CONVERT(VARCHAR(100), AIS_YXRY2.dbo.t_RP_ARPBill.FDate, 23)
+                       ) t1 ON t1.部门代码 = a.部门代码
+                               AND t1.日期 = a.日期
+            LEFT  JOIN (--食品
+                         SELECT AIS_YXSP2.dbo.t_Department.FNumber AS 部门代码 ,
+                                CONVERT(VARCHAR(100), AIS_YXSP2.dbo.t_RP_ARPBill.FDate, 23) AS 日期 ,
+                                ISNULL(SUM(ROUND(ISNULL(AIS_YXSP2.dbo.t_RP_Plan_Ar.FAmountFor,
+                                                        0),
+                                                 AIS_YXSP2.dbo.t_Currency.FScale)),
+                                       0.00) AS FAmountFor_2
+                         FROM   AIS_YXSP2.dbo.t_RP_ARPBill
+                                LEFT JOIN AIS_YXSP2.dbo.t_RP_Plan_Ar ON AIS_YXSP2.dbo.t_RP_ARPBill.FBillID = AIS_YXSP2.dbo.t_RP_Plan_Ar.FBillID
+                                                              AND AIS_YXSP2.dbo.t_RP_Plan_Ar.FIsInit = 0
+                                LEFT  JOIN AIS_YXSP2.dbo.t_Currency ON AIS_YXSP2.dbo.t_RP_ARPBill.FCurrencyID = AIS_YXSP2.dbo.t_Currency.FCurrencyID
+                                                              AND AIS_YXSP2.dbo.t_Currency.FCurrencyID <> 0
+                                LEFT  JOIN AIS_YXSP2.dbo.t_Department ON AIS_YXSP2.dbo.t_RP_ARPBill.FDepartment = AIS_YXSP2.dbo.t_Department.FItemID
+                                                              AND AIS_YXSP2.dbo.t_Department.FItemID <> 0
+                         WHERE  ( DATEDIFF(DAY, @BegDate1,
+                                           AIS_YXSP2.dbo.t_RP_ARPBill.FDate) >= 0
+                                  AND DATEDIFF(DAY, @EndDate1,
+                                               AIS_YXSP2.dbo.t_RP_ARPBill.FDate) <= 0
+                                  AND AIS_YXSP2.dbo.t_Department.FNumber IN (
+                                  '10.15' )
+                                )
+                                AND AIS_YXSP2.dbo.t_RP_ARPBill.FClassTypeID = 1000021
+                         GROUP BY AIS_YXSP2.dbo.t_Department.FNumber ,
+                                CONVERT(VARCHAR(100), AIS_YXSP2.dbo.t_RP_ARPBill.FDate, 23)
+                       ) t2 ON t2.部门代码 = a.部门代码
+                               AND t2.日期 = a.日期;
+
+ 
+
+    ALTER TABLE  #rsjyb ADD 毛利 FLOAT;  
+    ALTER TABLE  #rsjyb ADD 单头毛利 FLOAT; 
+    UPDATE  #rsjyb
+    SET     毛利 = CONVERT(NUMERIC(10, 2), 收入 - 成本);    
+    UPDATE  #rsjyb
+    SET     单头毛利 = CONVERT(NUMERIC(10, 2), ROUND(毛利 / 头数, 2))
+    WHERE   头数 <> 0;             
+              
+              
+-----部门10.11计算      
+--猪      
+    INSERT  INTO #rsjyb
+            ( 日期 ,
+              部门代码 ,
+              部门名称 ,
+              头数 ,
+              数量 ,
+              收入 ,
+              成本 ,
+              毛利 ,
+              单头毛利
+            )
+            SELECT  CONVERT(VARCHAR(100), v.FSubRKDate, 23) ,
+                    '10.11' ,
+                    '门店管理部(猪)' ,
+                    0.00 ,
+                    0.00 ,
+                    0.00 ,
+                    ROUND(SUM(u.Fcommitqty * ISNULL(p.Fprice, 0.00) / 0.91), 2) AS fcbamout ,
+                    0.00 ,
+                    NULL
+            FROM    AIS_YXSP2.dbo.T_SubRKDEntry u
+                    INNER JOIN AIS_YXSP2.dbo.T_SubRKD v ON v.FID = u.FID
+                    INNER JOIN AIS_YXSP2.dbo.t_Item t ON t.FItemID = u.FSubRKDItemID
+                                                         AND t.FItemClassID = 4
+                                                         AND t.FNumber NOT LIKE '%7.1.03.%'
+                                                                                                                 --过滤冻品7.1.02……、8.8.02.02……、8.8.03.02
+                                                         AND t.FNumber NOT LIKE '7.1.02%'
+                                                         AND t.FNumber NOT LIKE '8.8.02.02%'
+                                                         AND t.FNumber NOT LIKE '8.8.03.02%'
+                    LEFT JOIN yx_rs_ysprice p ON p.Fnumber = t.FNumber
+                                                 AND p.FDATE = v.FSubRKDate
+            WHERE   FSubRKDate BETWEEN @BegDate1 AND @EndDate1
+            GROUP BY v.FSubRKDate;  
+
+
+
+--计算10.11 头数 
+
+    UPDATE  b
+    SET     头数 = gg.FSubAffQty
+    FROM    #rsjyb b
+            INNER JOIN ( SELECT FDate fdate ,
+                                SUM(ISNULL(FSubAffQty, 0)) AS FSubAffQty
+                         FROM   AIS_YXSP2.dbo.t_SubCustomSell
+                         WHERE  fdate BETWEEN @BegDate1 AND @EndDate1
+                         GROUP BY fdate
+                       ) gg ON b.日期 = gg.fdate
+    WHERE   部门代码 = '10.11'
+            AND 部门名称 = '门店管理部(猪)';
+       
+      
+--加上上一日的门店鲜肉结余表的金额 (猪)     
+    UPDATE  #rsjyb
+    SET     成本 = 成本 + b.FAmount
+    FROM    #rsjyb a
+            INNER JOIN ( SELECT CONVERT(VARCHAR(100), DATEADD(DAY, 1, v.FDate), 23) AS 日期 ,
+                                '10.11' AS 部门代码 ,
+                                '门店管理部(猪)' 部门名称 ,
+                                CONVERT(NUMERIC(10, 2), ROUND(SUM(u.FAmount),
+                                                              2)) AS FAmount
+                         FROM   AIS_YXSP2.dbo.T_YX_SubInStockEntry u
+                                INNER JOIN AIS_YXSP2.dbo.T_YX_SubInStock v ON v.FID = u.FID
+                                INNER JOIN AIS_YXSP2.dbo.t_ICItem t ON t.FItemID = u.FItemId
+                                                              AND t.FNumber NOT LIKE '%7.1.03.%'   -- 过滤山羊肉 
+                                                                                                                      --过滤冻品7.1.02……、8.8.02.02……、8.8.03.02
+                                                              AND t.FNumber NOT LIKE '7.1.02%'
+                                                              AND t.FNumber NOT LIKE '8.8.02.02%'
+                                                              AND t.FNumber NOT LIKE '8.8.03.02%'
+                         WHERE  v.FDate BETWEEN DATEADD(DAY, -1, @BegDate1)
+                                        AND     DATEADD(DAY, -1, @EndDate1)
+                         GROUP BY CONVERT(VARCHAR(100), DATEADD(DAY, 1,
+                                                              v.FDate), 23)
+                       ) b ON b.部门代码 = a.部门代码
+                              AND b.日期 = a.日期
+                              AND a.部门名称 = b.部门名称
+    WHERE   a.部门代码 = '10.11'
+            AND a.部门名称 = '门店管理部(猪)';    
+
+
+
+  
+      
+--减去本日门店鲜肉结余表的金额  (猪)    
+    UPDATE  #rsjyb
+    SET     成本 = 成本 - b.FAmount
+    FROM    #rsjyb a
+            INNER JOIN ( SELECT CONVERT(VARCHAR(100), v.FDate, 23) AS 日期 ,
+                                '10.11' AS 部门代码 ,
+                                '门店管理部(猪)' 部门名称 ,
+                                CONVERT(NUMERIC(10, 2), ROUND(SUM(u.FAmount),
+                                                              2)) AS FAmount
+                         FROM   AIS_YXSP2.dbo.T_YX_SubInStockEntry u
+                                INNER JOIN AIS_YXSP2.dbo.T_YX_SubInStock v ON v.FID = u.FID
+                                INNER JOIN AIS_YXSP2.dbo.t_ICItem t ON t.FItemID = u.FItemId
+                                                              AND t.FNumber NOT  LIKE '%7.1.03.%'   -- 过滤山羊肉
+                                                                                                                      --过滤冻品7.1.02……、8.8.02.02……、8.8.03.02
+                                                              AND t.FNumber NOT LIKE '7.1.02%'
+                                                              AND t.FNumber NOT LIKE '8.8.02.02%'
+                                                              AND t.FNumber NOT LIKE '8.8.03.02%'
+                         WHERE  v.FDate BETWEEN @BegDate1 AND @EndDate1
+                         GROUP BY CONVERT(VARCHAR(100), v.FDate, 23)
+                       ) b ON b.部门代码 = a.部门代码
+                              AND b.日期 = a.日期
+                              AND a.部门名称 = b.部门名称
+    WHERE   a.部门代码 = '10.11'
+            AND a.部门名称 = '门店管理部(猪)';   
+
+
+
+
+--收入  增加肉业 czq  2017-08-15 
+
+    SELECT  '10.11' 部门代码 ,
+            部门名称 = '门店管理部(猪)' ,
+            v.FDate '日期' ,
+            SUM(FAuxQty) 数量 ,
+            SUM(ISNULL(p.Fprice, 0.000) * FAuxQty) / 0.91 成本 ,
+            SUM(FConsignAmount) FConsignAmount
+    INTO    #abcd
+    FROM    AIS_YXRY2.dbo.ICStockBillEntry u
+            INNER JOIN AIS_YXRY2.dbo.ICStockBill v ON v.FInterID = u.FInterID
+            INNER JOIN AIS_YXRY2.dbo.t_Item w ON w.FItemID = u.FItemID
+                                                 AND FItemClassID = 4
+            LEFT JOIN AIS_YXRY2.dbo.t_Department t ON t.FItemID = v.FDeptID
+            LEFT JOIN yx_rs_ysprice p ON p.Fnumber = w.FNumber
+                                         AND p.FDATE = v.FDate
+            LEFT JOIN AIS_YXRY2.dbo.t_Stock s ON s.FItemID = u.FDCStockID
+    WHERE   v.FTranType = 21
+            AND v.FCancellation = 0
+            AND v.FDate BETWEEN @BegDate1 AND @EndDate1
+            AND t.FNumber = '10.11'
+            --过滤冻品7.1.02……、8.8.02.02……、8.8.03.02
+            AND w.FNumber NOT LIKE '7.1.02%'
+            AND w.FNumber NOT LIKE '8.8.02.02%'
+            AND w.FNumber NOT LIKE '8.8.03.02%'
+    GROUP BY v.FDate; 
+
+
+
+
+    UPDATE  b
+    SET     成本 = ISNULL(b.成本, 0) + ISNULL(d.成本, 0)
+    FROM    #rsjyb b
+            INNER JOIN #abcd d ON b.部门代码 = d.部门代码
+                                  AND b.部门名称 = d.部门名称
+                                  AND b.日期 = d.日期;
+
+
+
+
+
+
+
+--门店数量与头数以这个为准
+    UPDATE  #rsjyb
+    SET     头数 = b.CalNum
+    FROM    #rsjyb a
+            INNER JOIN ( SELECT CONVERT(VARCHAR(100), a.deliverydate, 23) AS CalDate ,
+                                SUM(b.quantity) AS CalNum
+                         FROM   ( SELECT    deliverydate ,
+                                            deliverycode
+                                  FROM      CON12.yrtzdata.dbo.TZ_XS_delivery2020
+                                  WHERE     ( fhclientcode LIKE 'R09.0004.%'
+                                              OR fhclientname LIKE 'S%'
+                                            )
+                                            AND storagename = '白条库'
+                                ) a ,
+                                CON12.yrtzdata.dbo.TZ_XS_deliveryinfo2020 b
+                         WHERE  a.deliverycode = b.deliverycode
+                                AND a.deliverydate BETWEEN @BegDate AND @EndDate2
+                                                         AND b.productcode NOT LIKE '7.1.02%'
+                                AND b.productcode NOT LIKE '8.8.02.02%'
+                                AND b.productcode NOT LIKE '8.8.03.02%'
+                         GROUP BY CONVERT(VARCHAR(100), a.deliverydate, 23)
+                       ) b ON a.日期 = b.CalDate
+                              AND a.部门代码 = '10.11';
+
+
+
+
+
+
+
+
+    UPDATE  #rsjyb
+    SET     数量 = b.CalWeight
+    FROM    #rsjyb a
+            INNER JOIN ( SELECT CONVERT(VARCHAR(100), a.deliverydate, 23) AS CalDate ,
+                                SUM(b.weight) AS CalWeight
+                         FROM   ( SELECT    deliverydate ,
+                                            deliverycode
+                                  FROM      CON12.yrtzdata.dbo.TZ_XS_delivery2020
+                                  WHERE     ( fhclientcode LIKE 'R09.0004.%'
+                                              OR fhclientname LIKE 'S%'
+                                            )
+                                ) a ,
+                                CON12.yrtzdata.dbo.TZ_XS_deliveryinfo2020 b
+                         WHERE  a.deliverycode = b.deliverycode
+                                AND a.deliverydate BETWEEN @BegDate AND @EndDate2
+                                                        AND b.productcode NOT LIKE '7.1.02%'
+                                AND b.productcode NOT LIKE '8.8.02.02%'
+                                AND b.productcode NOT LIKE '8.8.03.02%'
+                         GROUP BY CONVERT(VARCHAR(100), a.deliverydate, 23)
+                       ) b ON a.日期 = b.CalDate
+                              AND a.部门代码 = '10.11';
+                              
+                              
+                              
+                              
+    UPDATE  #rsjyb
+    SET     数量 = 数量 + c.CalNumber
+    FROM    #rsjyb a --增加食品账套其他出库单的物料包含8.8的数量
+            INNER JOIN ( SELECT CONVERT(VARCHAR(100), v1.FDate, 23) AS CalDate ,
+                                SUM(u1.FAuxQty) AS CalNumber
+                         FROM   AIS_YXSP2.dbo.ICStockBill v1
+                                INNER JOIN AIS_YXSP2.dbo.ICStockBillEntry u1 ON v1.FInterID = u1.FInterID
+                                                              AND u1.FInterID <> 0
+                                INNER JOIN AIS_YXSP2.dbo.t_ICItem t12 ON u1.FItemID = t12.FItemID
+                                                              AND t12.FItemID <> 0
+                         WHERE  1 = 1
+                                AND ( v1.FDate BETWEEN @BegDate AND @EndDate2
+                                      AND ISNULL(t12.FNumber, '') LIKE '8.8%'
+                                    )
+                                AND ( v1.FTranType = 29 )
+                         GROUP BY v1.FDate
+                       ) c ON a.日期 = c.CalDate
+                              AND a.部门代码 = '10.11';                              
+
+--门店数量与头数以这个为准
+
+
+
+--门店收入与这个为准
+
+    UPDATE  #rsjyb
+    SET     收入 = b.Z_TOTAL_MONEY
+    FROM    #rsjyb a
+            INNER JOIN ( SELECT a.Z_ORG_ID ,
+                                CONVERT(VARCHAR(100), Z_SALE_DT, 23) AS Z_SALE_DT ,
+                                SUM(Z_TOTAL_MONEY) AS Z_TOTAL_MONEY
+                         FROM   [zhuok].[dbo].[YINXIANG_DATA] a
+                                INNER JOIN [zhuok].[dbo].[DZC_GOODS] b ON a.Z_GOODS_ID = b.ID_KEY
+                         WHERE  b.Z_TYPE_NM = '猪肉'
+                                AND b.Z_GOODS_CODE NOT LIKE '7.1.02%'
+                                AND b.Z_GOODS_CODE NOT LIKE '8.8.02.02%'
+                                AND b.Z_GOODS_CODE NOT LIKE '8.8.03.02%'
+                         GROUP BY a.Z_ORG_ID ,
+                                CONVERT(VARCHAR(100), Z_SALE_DT, 23)
+                       ) b ON a.日期 = b.Z_SALE_DT
+                              AND a.部门代码 = '10.11';
+--门店收入与这个为准
+  
+
+
+
+     UPDATE  #rsjyb
+    SET     毛利 = CONVERT(NUMERIC(10, 2), 收入 - 成本);    
+    UPDATE  #rsjyb
+    SET     单头毛利 = CONVERT(NUMERIC(10, 2), ROUND(毛利 / 头数, 2))
+    WHERE   头数 <> 0;        
+  
+
+
+
+
+
+   
+   
+    SELECT  a.*
+    INTO    #ttt
+    FROM    ( SELECT    Q.日期 ,
+                        部门代码 ,
+                        部门名称 ,
+                        头数 ,
+                        数量 ,
+                        收入 ,
+                        成本 ,
+                        毛利 ,
+                        单头毛利
+              FROM      #rsjyb Q  
+    
+--明细
+              UNION ALL
+              SELECT    日期 ,
+                        '本日小计' AS 部门代码 ,
+                        '' AS 部门名称 ,
+                        SUM(头数) AS 头数 ,
+                        SUM(数量) AS 数量 ,
+                        SUM(收入) AS 收入 ,
+                        SUM(成本) AS 成本 ,
+                        SUM(毛利) AS 毛利 ,
+                        NULL AS 单头毛利
+              FROM      #rsjyb      
+--本日小计     
+GROUP BY                日期
+              UNION ALL
+              SELECT    '合计' AS 日期 ,
+                        '' AS 部门代码 ,
+                        '' AS 部门名称 ,
+                        SUM(头数) AS 头数 ,
+                        SUM(数量) AS 数量 ,
+                        SUM(收入) AS 收入 ,
+                        SUM(成本) AS 成本 ,
+                        SUM(毛利) AS 毛利 ,
+                        NULL AS 单头毛利
+              FROM      #rsjyb  
+--合计 
+            ) a
+    ORDER BY a.日期 ,
+            a.部门代码;  
+
+    IF ( @DiffCount = 0 )
+        BEGIN 
+            ALTER TABLE  #ttt ADD 本月累计销量 FLOAT NULL; 
+            ALTER TABLE  #ttt ADD 本月累计毛利 FLOAT NULL;
+
+            ALTER TABLE  #ttt ADD 当天屠宰头数 FLOAT NULL; 
+            ALTER TABLE  #ttt ADD 当月屠宰头数 FLOAT NULL; 
+ 
+  -- 重新赋值开始日期 取本月第一天
+
+            SELECT  @BegDate1 = CONVERT(VARCHAR(10), DATEPART(YEAR, @EndDate1))
+                    + '-' + CONVERT(VARCHAR(10), DATEPART(MONTH, @EndDate1))
+                    + '-01';
+
+
+--从肉业取数       
+            SELECT  'R' AS ztname ,
+                    v.FDate ,
+                    w.FNumber AS wnumber ,
+                    t.FNumber AS dnumber ,
+                    CASE t.FNumber
+                      WHEN '10.12' THEN u.FSecQty
+                      WHEN '10.13' THEN u.FSecQty
+                      ELSE 0.0000
+                    END FSecQty ,
+                    FAuxQty ,
+                    FConsignPrice ,
+                    FConsignAmount ,
+                    ISNULL(p.Fprice, 0.000) AS fCBprice
+            INTO    #rsjyb2mx2
+            FROM    AIS_YXRY2.dbo.ICStockBillEntry u
+                    INNER JOIN AIS_YXRY2.dbo.ICStockBill v ON v.FInterID = u.FInterID
+                    INNER JOIN AIS_YXRY2.dbo.t_Item w ON w.FItemID = u.FItemID
+                                                         AND FItemClassID = 4
+                    LEFT JOIN AIS_YXRY2.dbo.t_Department t ON t.FItemID = v.FDeptID
+                    LEFT JOIN yx_rs_ysprice p ON p.Fnumber = w.FNumber
+                                                 AND p.FDATE = v.FDate
+                    LEFT JOIN AIS_YXRY2.dbo.t_Stock s ON s.FItemID = u.FDCStockID
+            WHERE   v.FTranType = 21
+                    AND v.FCancellation = 0
+                    AND v.FDate BETWEEN @BegDate1 AND @EndDate1
+                    AND t.FNumber >= '10.12'
+                    AND t.FNumber <= '10.18'
+                    AND t.FNumber <> '10.14'
+                    AND CHARINDEX('号', s.FName) = 0
+        --过滤冻品7.1.02……、8.8.02.02……、8.8.03.02
+            AND w.FNumber NOT LIKE '7.1.02%'
+            AND w.FNumber NOT LIKE '8.8.02.02%'
+            AND w.FNumber NOT LIKE '8.8.03.02%';                       
+                    
+                       
+  
+  
+--从肉业取数, 加入10.19   
+            INSERT  INTO #rsjyb2mx2
+                    ( ztname ,
+                      FDate ,
+                      wnumber ,
+                      dnumber ,
+                      FSecQty ,
+                      FAuxQty ,
+                      FConsignPrice ,
+                      FConsignAmount ,
+                      fCBprice
+                    )
+                    SELECT  'R' AS ztname ,
+                            v.FDate ,
+                            w.FNumber AS wnumber ,
+                            t.FNumber AS dnumber ,
+                            CASE t.FNumber
+                              WHEN '10.12' THEN u.FSecQty
+                              WHEN '10.13' THEN u.FSecQty
+                              ELSE 0.0000
+                            END FSecQty ,
+                            FQty ,
+                            FConsignPrice ,
+                            FConsignAmount ,
+                            ISNULL(p.Fprice, 0.000) AS fCBprice
+                    FROM    AIS_YXRY2.dbo.ICStockBillEntry u
+                            INNER JOIN AIS_YXRY2.dbo.ICStockBill v ON v.FInterID = u.FInterID
+                            INNER JOIN AIS_YXRY2.dbo.t_Item w ON w.FItemID = u.FItemID
+                                                              AND FItemClassID = 4
+                            LEFT JOIN AIS_YXRY2.dbo.t_Department t ON t.FItemID = v.FDeptID
+                            LEFT JOIN yx_rs_ysprice p ON p.Fnumber = w.FNumber
+                                                         AND p.FDATE = v.FDate
+                            LEFT JOIN AIS_YXRY2.dbo.t_Stock s ON s.FItemID = u.FDCStockID
+                    WHERE   v.FTranType = 21
+                            AND v.FCancellation = 0
+                            AND v.FDate BETWEEN @BegDate1 AND @EndDate1
+                            AND t.FNumber = '10.19'
+                            AND CHARINDEX('号', s.FName) = 0
+                            AND CHARINDEX('小副', t.FName) > 0
+                            
+                                   --过滤冻品7.1.02……、8.8.02.02……、8.8.03.02
+            AND w.FNumber NOT LIKE '7.1.02%'
+            AND w.FNumber NOT LIKE '8.8.02.02%'
+            AND w.FNumber NOT LIKE '8.8.03.02%';     
+
+--从肉业取数, 加入10.20   
+            INSERT  INTO #rsjyb2mx2
+                    ( ztname ,
+                      FDate ,
+                      wnumber ,
+                      dnumber ,
+                      FSecQty ,
+                      FAuxQty ,
+                      FConsignPrice ,
+                      FConsignAmount ,
+                      fCBprice
+                    )
+                    SELECT  'R' AS ztname ,
+                            v.FDate ,
+                            w.FNumber AS wnumber ,
+                            t.FNumber AS dnumber ,
+                            CASE t.FNumber
+                              WHEN '10.12' THEN u.FSecQty
+                              WHEN '10.13' THEN u.FSecQty
+                              ELSE 0.0000
+                            END FSecQty ,
+                            FQty ,
+                            FConsignPrice ,
+                            FConsignAmount ,
+                            ISNULL(p.Fprice, 0.000) AS fCBprice
+                    FROM    AIS_YXRY2.dbo.ICStockBillEntry u
+                            INNER JOIN AIS_YXRY2.dbo.ICStockBill v ON v.FInterID = u.FInterID
+                            INNER JOIN AIS_YXRY2.dbo.t_Item w ON w.FItemID = u.FItemID
+                                                              AND FItemClassID = 4
+                            LEFT JOIN AIS_YXRY2.dbo.t_Department t ON t.FItemID = v.FDeptID
+                            LEFT JOIN yx_rs_ysprice p ON p.Fnumber = w.FNumber
+                                                         AND p.FDATE = v.FDate
+                            LEFT JOIN AIS_YXRY2.dbo.t_Stock s ON s.FItemID = u.FDCStockID
+                    WHERE   v.FTranType = 21
+                            AND v.FCancellation = 0
+                            AND v.FDate BETWEEN @BegDate1 AND @EndDate1
+                            AND t.FNumber = '10.20'
+                            AND CHARINDEX('号', s.FName) = 0
+                            --过滤冻品7.1.02……、8.8.02.02……、8.8.03.02
+							AND w.FNumber NOT LIKE '7.1.02%'
+							AND w.FNumber NOT LIKE '8.8.02.02%'
+							AND w.FNumber NOT LIKE '8.8.03.02%';     
+
+--从肉业取数, 加入10.21   
+            INSERT  INTO #rsjyb2mx2
+                    ( ztname ,
+                      FDate ,
+                      wnumber ,
+                      dnumber ,
+                      FSecQty ,
+                      FAuxQty ,
+                      FConsignPrice ,
+                      FConsignAmount ,
+                      fCBprice
+                    )
+                    SELECT  'R' AS ztname ,
+                            v.FDate ,
+                            w.FNumber AS wnumber ,
+                            t.FNumber AS dnumber ,
+                            CASE t.FNumber
+                              WHEN '10.12' THEN u.FSecQty
+                              WHEN '10.13' THEN u.FSecQty
+                              ELSE 0.0000
+                            END FSecQty ,
+                            FQty ,
+                            FConsignPrice ,
+                            FConsignAmount ,
+                            ISNULL(p.Fprice, 0.000) AS fCBprice
+                    FROM    AIS_YXRY2.dbo.ICStockBillEntry u
+                            INNER JOIN AIS_YXRY2.dbo.ICStockBill v ON v.FInterID = u.FInterID
+                            INNER JOIN AIS_YXRY2.dbo.t_Item w ON w.FItemID = u.FItemID
+                                                              AND FItemClassID = 4
+                                                              AND w.FNumber NOT LIKE '8.%'
+                            LEFT JOIN AIS_YXRY2.dbo.t_Department t ON t.FItemID = v.FDeptID
+                            LEFT JOIN yx_rs_ysprice p ON p.Fnumber = w.FNumber
+                                                         AND p.FDATE = v.FDate
+                            LEFT JOIN AIS_YXRY2.dbo.t_Stock s ON s.FItemID = u.FDCStockID
+                    WHERE   v.FTranType = 21
+                            AND v.FCancellation = 0
+                            AND v.FDate BETWEEN @BegDate1 AND @EndDate1
+                            AND t.FNumber = '10.21'
+                            AND CHARINDEX('号', s.FName) = 0
+                                    --过滤冻品7.1.02……、8.8.02.02……、8.8.03.02
+            AND w.FNumber NOT LIKE '7.1.02%'
+            AND w.FNumber NOT LIKE '8.8.02.02%'
+            AND w.FNumber NOT LIKE '8.8.03.02%';     
+   
+
+--从食品取数      
+            INSERT  INTO #rsjyb2mx2
+                    ( ztname ,
+                      FDate ,
+                      wnumber ,
+                      dnumber ,
+                      FSecQty ,
+                      FAuxQty ,
+                      FConsignPrice ,
+                      FConsignAmount ,
+                      fCBprice
+                    )
+                    SELECT  'S' AS ztname ,
+                            v.FDate ,
+                            w.FNumber AS wnumber ,
+                            t.FNumber AS dnumber ,
+                            CASE t.FNumber
+                              WHEN '10.12' THEN u.FSecQty
+                              WHEN '10.13' THEN u.FSecQty
+                              ELSE 0.0000
+                            END FSecQty ,
+                            FAuxQty ,
+                            FConsignPrice ,
+                            FConsignAmount ,
+                            ISNULL(p.Fprice, 0.000) AS fCBprice
+                    FROM    AIS_YXSP2.dbo.ICStockBillEntry u
+                            INNER JOIN AIS_YXSP2.dbo.ICStockBill v ON v.FInterID = u.FInterID
+                            INNER JOIN AIS_YXSP2.dbo.t_Item w ON w.FItemID = u.FItemID
+                                                              AND FItemClassID = 4
+                            LEFT JOIN AIS_YXSP2.dbo.t_Department t ON t.FItemID = v.FDeptID
+                            LEFT JOIN yx_rs_ysprice p ON p.Fnumber = w.FNumber
+                                                         AND p.FDATE = v.FDate
+                            LEFT JOIN AIS_YXSP2.dbo.t_Stock s ON s.FItemID = u.FDCStockID
+                    WHERE   v.FTranType = 21
+                            AND v.FCancellation = 0
+                            AND v.FDate BETWEEN @BegDate1 AND @EndDate1
+                            AND t.FNumber >= '10.12'
+                            AND t.FNumber <= '10.18'
+                            AND t.FNumber <> '10.14'
+                            AND CHARINDEX('号', s.FName) = 0
+                                    --过滤冻品7.1.02……、8.8.02.02……、8.8.03.02
+            AND w.FNumber NOT LIKE '7.1.02%'
+            AND w.FNumber NOT LIKE '8.8.02.02%'
+            AND w.FNumber NOT LIKE '8.8.03.02%';       
+
+            INSERT  INTO #rsjyb2mx2
+                    ( ztname ,
+                      FDate ,
+                      wnumber ,
+                      dnumber ,
+                      FSecQty ,
+                      FAuxQty ,
+                      FConsignPrice ,
+                      FConsignAmount ,
+                      fCBprice
+                    )
+                    SELECT  'S' AS ztname ,
+                            v.FDate ,
+                            w.FNumber AS wnumber ,
+                            t.FNumber AS dnumber ,
+                            CASE t.FNumber
+                              WHEN '10.12' THEN u.FSecQty
+                              WHEN '10.13' THEN u.FSecQty
+                              ELSE 0.0000
+                            END FSecQty ,
+                            FAuxQty ,
+                            FConsignPrice ,
+                            FConsignAmount ,
+                            ISNULL(p.Fprice, 0.000) AS fCBprice
+                    FROM    AIS_YXSP2.dbo.ICStockBillEntry u
+                            INNER JOIN AIS_YXSP2.dbo.ICStockBill v ON v.FInterID = u.FInterID
+                            INNER JOIN AIS_YXSP2.dbo.t_Item w ON w.FItemID = u.FItemID
+                                                              AND FItemClassID = 4
+                            LEFT JOIN AIS_YXSP2.dbo.t_Department t ON t.FItemID = v.FDeptID
+                            LEFT JOIN yx_rs_ysprice p ON p.Fnumber = w.FNumber
+                                                         AND p.FDATE = v.FDate
+                            LEFT JOIN AIS_YXSP2.dbo.t_Stock s ON s.FItemID = u.FDCStockID
+                    WHERE   v.FTranType = 21
+                            AND v.FCancellation = 0
+                            AND v.FDate BETWEEN @BegDate1 AND @EndDate1
+                            AND t.FNumber = '10.20'
+                            AND CHARINDEX('号', s.FName) = 0
+                                    --过滤冻品7.1.02……、8.8.02.02……、8.8.03.02
+							AND w.FNumber NOT LIKE '7.1.02%'
+							AND w.FNumber NOT LIKE '8.8.02.02%'
+							AND w.FNumber NOT LIKE '8.8.03.02%';      
+
+
+            INSERT  INTO #rsjyb2mx2
+                    ( ztname ,
+                      FDate ,
+                      wnumber ,
+                      dnumber ,
+                      FSecQty ,
+                      FAuxQty ,
+                      FConsignPrice ,
+                      FConsignAmount ,
+                      fCBprice
+                    )
+                    SELECT  'S' AS ztname ,
+                            v.FDate ,
+                            w.FNumber AS wnumber ,
+                            t.FNumber AS dnumber ,
+                            CASE t.FNumber
+                              WHEN '10.12' THEN u.FSecQty
+                              WHEN '10.13' THEN u.FSecQty
+                              ELSE 0.0000
+                            END FSecQty ,
+                            FAuxQty ,
+                            FConsignPrice ,
+                            FConsignAmount ,
+                            ISNULL(p.Fprice, 0.000) AS fCBprice
+                    FROM    AIS_YXSP2.dbo.ICStockBillEntry u
+                            INNER JOIN AIS_YXSP2.dbo.ICStockBill v ON v.FInterID = u.FInterID
+                            INNER JOIN AIS_YXSP2.dbo.t_Item w ON w.FItemID = u.FItemID
+                                                              AND FItemClassID = 4
+                                                              AND w.FNumber NOT LIKE '8.%'
+                            LEFT JOIN AIS_YXSP2.dbo.t_Department t ON t.FItemID = v.FDeptID
+                            LEFT JOIN yx_rs_ysprice p ON p.Fnumber = w.FNumber
+                                                         AND p.FDATE = v.FDate
+                            LEFT JOIN AIS_YXSP2.dbo.t_Stock s ON s.FItemID = u.FDCStockID
+                    WHERE   v.FTranType = 21
+                            AND v.FCancellation = 0
+                            AND v.FDate BETWEEN @BegDate1 AND @EndDate1
+                            AND t.FNumber = '10.21'
+                            AND CHARINDEX('号', s.FName) = 0
+                                    --过滤冻品7.1.02……、8.8.02.02……、8.8.03.02
+            AND w.FNumber NOT LIKE '7.1.02%'
+            AND w.FNumber NOT LIKE '8.8.02.02%'
+            AND w.FNumber NOT LIKE '8.8.03.02%';     
+
+  
+   
+            ALTER TABLE #rsjyb2mx2 ADD FCBAmount FLOAT;       
+      
+      
+
+      
+            UPDATE  #rsjyb2mx2       
+            SET     FConsignAmount = FConsignAmount ,
+                    FCBAmount = ROUND(FAuxQty * fCBprice / 0.91, 2)
+            WHERE   ztname = 'R'
+                    AND dnumber IN ( '10.12', '10.13' );      
+--食品部门为 10.12 10.13的 收入直接计算 成本   
+            UPDATE  #rsjyb2mx2
+            SET     FConsignAmount = FConsignAmount ,
+                    FCBAmount = ROUND(FAuxQty * fCBprice / 0.91, 2)
+            WHERE   ztname = 'S'
+                    AND dnumber IN ( '10.12', '10.13' );      
+--其他 收入/1.13 成本直接计算      
+            UPDATE  #rsjyb2mx2
+            SET     FConsignAmount = ROUND(FConsignAmount / 1.09, 2) ,
+                    FCBAmount = ROUND(FAuxQty * fCBprice, 2)
+            WHERE   dnumber NOT  IN ( '10.12', '10.13' );    
+
+  
+ 
+      
+            SELECT  CONVERT(VARCHAR(100), a.FDate, 23) 日期 ,
+                    a.dnumber 部门代码 ,
+                    d.FName 部门名称 ,
+                    CONVERT(NUMERIC(10, 2), ROUND(SUM(FSecQty), 2)) 头数 ,
+                    CONVERT(NUMERIC(10, 2), ROUND(SUM(FAuxQty), 2)) 数量 ,
+                    CONVERT(NUMERIC(10, 2), ROUND(SUM(FConsignAmount), 2)) 收入 ,
+                    CONVERT(NUMERIC(10, 2), ROUND(SUM(FCBAmount), 2)) 成本       
+            INTO    #rsjyb2
+            FROM    #rsjyb2mx2 a
+                    LEFT JOIN AIS_YXRY2.dbo.t_Department d ON d.FNumber = a.dnumber
+            GROUP BY a.FDate ,
+                    a.dnumber ,
+                    d.FName
+            ORDER BY a.FDate ,
+                    a.dnumber;      
+       
+            UPDATE  #rsjyb2
+            SET     收入 = 收入 + ISNULL(t1.FAmountFor_2, 0.00)
+                    + ISNULL(t2.FAmountFor_2, 0.00)
+            FROM    #rsjyb2 a
+                    LEFT  JOIN (--肉业
+                                 SELECT AIS_YXRY2.dbo.t_Department.FNumber AS 部门代码 ,
+                                        CONVERT(VARCHAR(100), AIS_YXRY2.dbo.t_RP_ARPBill.FDate, 23) AS 日期 ,
+                                        ISNULL(SUM(ROUND(ISNULL(AIS_YXRY2.dbo.t_RP_Plan_Ar.FAmountFor,
+                                                              0),
+                                                         AIS_YXRY2.dbo.t_Currency.FScale)),
+                                               0.00) AS FAmountFor_2
+                                 FROM   AIS_YXRY2.dbo.t_RP_ARPBill
+                                        LEFT JOIN AIS_YXRY2.dbo.t_RP_Plan_Ar ON AIS_YXRY2.dbo.t_RP_ARPBill.FBillID = AIS_YXRY2.dbo.t_RP_Plan_Ar.FBillID
+                                                              AND AIS_YXRY2.dbo.t_RP_Plan_Ar.FIsInit = 0
+                                        LEFT  JOIN AIS_YXRY2.dbo.t_Currency ON AIS_YXRY2.dbo.t_RP_ARPBill.FCurrencyID = AIS_YXRY2.dbo.t_Currency.FCurrencyID
+                                                              AND AIS_YXRY2.dbo.t_Currency.FCurrencyID <> 0
+                                        LEFT  JOIN AIS_YXRY2.dbo.t_Department ON AIS_YXRY2.dbo.t_RP_ARPBill.FDepartment = AIS_YXRY2.dbo.t_Department.FItemID
+                                                              AND AIS_YXRY2.dbo.t_Department.FItemID <> 0
+                                 WHERE  ( DATEDIFF(DAY, @BegDate1,
+                                                   AIS_YXRY2.dbo.t_RP_ARPBill.FDate) >= 0
+                                          AND DATEDIFF(DAY, @EndDate1,
+                                                       AIS_YXRY2.dbo.t_RP_ARPBill.FDate) <= 0
+                                          AND AIS_YXRY2.dbo.t_Department.FNumber IN (
+                                          '10.12', '10.13' )
+                                        )
+                                        AND AIS_YXRY2.dbo.t_RP_ARPBill.FClassTypeID = 1000021
+                                 GROUP BY AIS_YXRY2.dbo.t_Department.FNumber ,
+                                        CONVERT(VARCHAR(100), AIS_YXRY2.dbo.t_RP_ARPBill.FDate, 23)
+                               ) t1 ON t1.部门代码 = a.部门代码
+                                       AND t1.日期 = a.日期
+                    LEFT  JOIN (--食品
+                                 SELECT AIS_YXSP2.dbo.t_Department.FNumber AS 部门代码 ,
+                                        CONVERT(VARCHAR(100), AIS_YXSP2.dbo.t_RP_ARPBill.FDate, 23) AS 日期 ,
+                                        ISNULL(SUM(ROUND(ISNULL(AIS_YXSP2.dbo.t_RP_Plan_Ar.FAmountFor,
+                                                              0),
+                                                         AIS_YXSP2.dbo.t_Currency.FScale)),
+                                               0.00) AS FAmountFor_2
+                                 FROM   AIS_YXSP2.dbo.t_RP_ARPBill
+                                        LEFT JOIN AIS_YXSP2.dbo.t_RP_Plan_Ar ON AIS_YXSP2.dbo.t_RP_ARPBill.FBillID = AIS_YXSP2.dbo.t_RP_Plan_Ar.FBillID
+                                                              AND AIS_YXSP2.dbo.t_RP_Plan_Ar.FIsInit = 0
+                                        LEFT  JOIN AIS_YXSP2.dbo.t_Currency ON AIS_YXSP2.dbo.t_RP_ARPBill.FCurrencyID = AIS_YXSP2.dbo.t_Currency.FCurrencyID
+                                                              AND AIS_YXSP2.dbo.t_Currency.FCurrencyID <> 0
+                                        LEFT  JOIN AIS_YXSP2.dbo.t_Department ON AIS_YXSP2.dbo.t_RP_ARPBill.FDepartment = AIS_YXSP2.dbo.t_Department.FItemID
+                                                              AND AIS_YXSP2.dbo.t_Department.FItemID <> 0
+                                 WHERE  ( DATEDIFF(DAY, @BegDate1,
+                                                   AIS_YXSP2.dbo.t_RP_ARPBill.FDate) >= 0
+                                          AND DATEDIFF(DAY, @EndDate1,
+                                                       AIS_YXSP2.dbo.t_RP_ARPBill.FDate) <= 0
+                                          AND AIS_YXSP2.dbo.t_Department.FNumber IN (
+                                          '10.12', '10.13' )
+                                        )
+                                        AND AIS_YXSP2.dbo.t_RP_ARPBill.FClassTypeID = 1000021
+                                 GROUP BY AIS_YXSP2.dbo.t_Department.FNumber ,
+                                        CONVERT(VARCHAR(100), AIS_YXSP2.dbo.t_RP_ARPBill.FDate, 23)
+                               ) t2 ON t2.部门代码 = a.部门代码
+                                       AND t2.日期 = a.日期
+            WHERE   a.部门代码 IN ( '10.12', '10.13' );
+ 
+ 
+            UPDATE  #rsjyb2
+            SET     收入 = 收入 + ISNULL(t1.FAmountFor_2 / 1.09, 0.00)
+                    + ISNULL(t2.FAmountFor_2 / 1.09, 0.00)
+            FROM    #rsjyb2 a
+                    LEFT  JOIN (--肉业
+                                 SELECT AIS_YXRY2.dbo.t_Department.FNumber AS 部门代码 ,
+                                        CONVERT(VARCHAR(100), AIS_YXRY2.dbo.t_RP_ARPBill.FDate, 23) AS 日期 ,
+                                        ISNULL(SUM(ROUND(ISNULL(AIS_YXRY2.dbo.t_RP_Plan_Ar.FAmountFor,
+                                                              0),
+                                                         AIS_YXRY2.dbo.t_Currency.FScale)),
+                                               0.00) AS FAmountFor_2
+                                 FROM   AIS_YXRY2.dbo.t_RP_ARPBill
+                                        LEFT JOIN AIS_YXRY2.dbo.t_RP_Plan_Ar ON AIS_YXRY2.dbo.t_RP_ARPBill.FBillID = AIS_YXRY2.dbo.t_RP_Plan_Ar.FBillID
+                                                              AND AIS_YXRY2.dbo.t_RP_Plan_Ar.FIsInit = 0
+                                        LEFT  JOIN AIS_YXRY2.dbo.t_Currency ON AIS_YXRY2.dbo.t_RP_ARPBill.FCurrencyID = AIS_YXRY2.dbo.t_Currency.FCurrencyID
+                                                              AND AIS_YXRY2.dbo.t_Currency.FCurrencyID <> 0
+                                        LEFT  JOIN AIS_YXRY2.dbo.t_Department ON AIS_YXRY2.dbo.t_RP_ARPBill.FDepartment = AIS_YXRY2.dbo.t_Department.FItemID
+                                                              AND AIS_YXRY2.dbo.t_Department.FItemID <> 0
+                                 WHERE  ( DATEDIFF(DAY, @BegDate1,
+                                                   AIS_YXRY2.dbo.t_RP_ARPBill.FDate) >= 0
+                                          AND DATEDIFF(DAY, @EndDate1,
+                                                       AIS_YXRY2.dbo.t_RP_ARPBill.FDate) <= 0
+                                          AND AIS_YXRY2.dbo.t_Department.FNumber IN (
+                                          '10.15', '10.16', '10.17', '10.19',
+                                          '10.20', '10.21' )
+                                        )
+                                        AND AIS_YXRY2.dbo.t_RP_ARPBill.FClassTypeID = 1000021
+                                 GROUP BY AIS_YXRY2.dbo.t_Department.FNumber ,
+                                        CONVERT(VARCHAR(100), AIS_YXRY2.dbo.t_RP_ARPBill.FDate, 23)
+                               ) t1 ON t1.部门代码 = a.部门代码
+                                       AND t1.日期 = a.日期
+                    LEFT  JOIN (--食品
+                                 SELECT AIS_YXSP2.dbo.t_Department.FNumber AS 部门代码 ,
+                                        CONVERT(VARCHAR(100), AIS_YXSP2.dbo.t_RP_ARPBill.FDate, 23) AS 日期 ,
+                                        ISNULL(SUM(ROUND(ISNULL(AIS_YXSP2.dbo.t_RP_Plan_Ar.FAmountFor,
+                                                              0),
+                                                         AIS_YXSP2.dbo.t_Currency.FScale)),
+                                               0.00) AS FAmountFor_2
+                                 FROM   AIS_YXSP2.dbo.t_RP_ARPBill
+                                        LEFT JOIN AIS_YXSP2.dbo.t_RP_Plan_Ar ON AIS_YXSP2.dbo.t_RP_ARPBill.FBillID = AIS_YXSP2.dbo.t_RP_Plan_Ar.FBillID
+                                                              AND AIS_YXSP2.dbo.t_RP_Plan_Ar.FIsInit = 0
+                                        LEFT  JOIN AIS_YXSP2.dbo.t_Currency ON AIS_YXSP2.dbo.t_RP_ARPBill.FCurrencyID = AIS_YXSP2.dbo.t_Currency.FCurrencyID
+                                                              AND AIS_YXSP2.dbo.t_Currency.FCurrencyID <> 0
+                                        LEFT  JOIN AIS_YXSP2.dbo.t_Department ON AIS_YXSP2.dbo.t_RP_ARPBill.FDepartment = AIS_YXSP2.dbo.t_Department.FItemID
+                                                              AND AIS_YXSP2.dbo.t_Department.FItemID <> 0
+                                 WHERE  ( DATEDIFF(DAY, @BegDate1,
+                                                   AIS_YXSP2.dbo.t_RP_ARPBill.FDate) >= 0
+                                          AND DATEDIFF(DAY, @EndDate1,
+                                                       AIS_YXSP2.dbo.t_RP_ARPBill.FDate) <= 0
+                                          AND AIS_YXSP2.dbo.t_Department.FNumber IN (
+                                          '10.15' )
+                                        )
+                                        AND AIS_YXSP2.dbo.t_RP_ARPBill.FClassTypeID = 1000021
+                                 GROUP BY AIS_YXSP2.dbo.t_Department.FNumber ,
+                                        CONVERT(VARCHAR(100), AIS_YXSP2.dbo.t_RP_ARPBill.FDate, 23)
+                               ) t2 ON t2.部门代码 = a.部门代码
+                                       AND t2.日期 = a.日期;
+
+ 
+
+ 
+
+            ALTER TABLE  #rsjyb2 ADD 毛利 FLOAT;  
+            ALTER TABLE  #rsjyb2 ADD 单头毛利 FLOAT; 
+            UPDATE  #rsjyb2
+            SET     毛利 = CONVERT(NUMERIC(10, 2), 收入 - 成本);    
+            UPDATE  #rsjyb2
+            SET     单头毛利 = CONVERT(NUMERIC(10, 2), ROUND(毛利 / 头数, 2))
+            WHERE   头数 <> 0;             
+              
+              
+-----部门10.11计算      
+--猪      
+            INSERT  INTO #rsjyb2
+                    ( 日期 ,
+                      部门代码 ,
+                      部门名称 ,
+                      头数 ,
+                      数量 ,
+                      收入 ,
+                      成本 ,
+                      毛利 ,
+                      单头毛利
+                    )
+                    SELECT  CONVERT(VARCHAR(100), v.FSubRKDate, 23) ,
+                            '10.11' ,
+                            '门店管理部(猪)' ,
+                            0.00 ,
+                            0.00 ,
+                            0.00 ,
+                            ROUND(SUM(u.Fcommitqty * ISNULL(p.Fprice, 0.00)
+                                      / 0.91), 2) AS fcbamout ,
+                            0.00 ,
+                            NULL
+                    FROM    AIS_YXSP2.dbo.T_SubRKDEntry u
+                            INNER JOIN AIS_YXSP2.dbo.T_SubRKD v ON v.FID = u.FID
+                            INNER JOIN AIS_YXSP2.dbo.t_Item t ON t.FItemID = u.FSubRKDItemID
+                                                              AND t.FItemClassID = 4
+                                                              AND t.FNumber NOT LIKE '%7.1.03.%'
+                                                                                                                         --过滤冻品7.1.02……、8.8.02.02……、8.8.03.02
+                                                         AND t.FNumber NOT LIKE '7.1.02%'
+                                                         AND t.FNumber NOT LIKE '8.8.02.02%'
+                                                         AND t.FNumber NOT LIKE '8.8.03.02%'
+                            LEFT JOIN yx_rs_ysprice p ON p.Fnumber = t.FNumber
+                                                         AND p.FDATE = v.FSubRKDate
+                    WHERE   FSubRKDate BETWEEN @BegDate1 AND @EndDate1
+                    GROUP BY v.FSubRKDate;  
+
+
+ 
+
+--计算10.11 头数 
+
+            UPDATE  b
+            SET     头数 = gg.FSubAffQty
+            FROM    #rsjyb2 b
+                    INNER JOIN ( SELECT FDate fdate ,
+                                        SUM(ISNULL(FSubAffQty, 0)) AS FSubAffQty
+                                 FROM   AIS_YXSP2.dbo.t_SubCustomSell
+                                 WHERE  fdate BETWEEN @BegDate1 AND @EndDate1
+                                 GROUP BY fdate
+                               ) gg ON b.日期 = gg.fdate
+            WHERE   部门代码 = '10.11'
+                    AND 部门名称 = '门店管理部(猪)';
+    
+        
+  
+      
+  
+      
+--加上上一日的门店鲜肉结余表的金额 (猪)     
+            UPDATE  #rsjyb2
+            SET     成本 = 成本 + b.FAmount
+            FROM    #rsjyb2 a
+                    INNER JOIN ( SELECT CONVERT(VARCHAR(100), DATEADD(DAY, 1,
+                                                              v.FDate), 23) AS 日期 ,
+                                        '10.11' AS 部门代码 ,
+                                        '门店管理部(猪)' 部门名称 ,
+                                        CONVERT(NUMERIC(10, 2), ROUND(SUM(u.FAmount),
+                                                              2)) AS FAmount
+                                 FROM   AIS_YXSP2.dbo.T_YX_SubInStockEntry u
+                                        INNER JOIN AIS_YXSP2.dbo.T_YX_SubInStock v ON v.FID = u.FID
+                                        INNER JOIN AIS_YXSP2.dbo.t_ICItem t ON t.FItemID = u.FItemId
+                                                              AND t.FNumber NOT LIKE '%7.1.03.%'   -- 过滤山羊肉    
+                                 WHERE  v.FDate BETWEEN DATEADD(DAY, -1,
+                                                              @BegDate1)
+                                                AND     DATEADD(DAY, -1,
+                                                              @EndDate1)
+                                 GROUP BY CONVERT(VARCHAR(100), DATEADD(DAY, 1,
+                                                              v.FDate), 23)
+                               ) b ON b.部门代码 = a.部门代码
+                                      AND b.日期 = a.日期
+                                      AND a.部门名称 = b.部门名称
+            WHERE   a.部门代码 = '10.11'
+                    AND a.部门名称 = '门店管理部(猪)';    
+
+
+
+  
+      
+--减去本日门店鲜肉结余表的金额  (猪)    
+            UPDATE  #rsjyb2
+            SET     成本 = 成本 - b.FAmount
+            FROM    #rsjyb2 a
+                    INNER JOIN ( SELECT CONVERT(VARCHAR(100), v.FDate, 23) AS 日期 ,
+                                        '10.11' AS 部门代码 ,
+                                        '门店管理部(猪)' 部门名称 ,
+                                        CONVERT(NUMERIC(10, 2), ROUND(SUM(u.FAmount),
+                                                              2)) AS FAmount
+                                 FROM   AIS_YXSP2.dbo.T_YX_SubInStockEntry u
+                                        INNER JOIN AIS_YXSP2.dbo.T_YX_SubInStock v ON v.FID = u.FID
+                                        INNER JOIN AIS_YXSP2.dbo.t_ICItem t ON t.FItemID = u.FItemId
+                                                              AND t.FNumber NOT  LIKE '%7.1.03.%'   -- 过滤山羊肉 
+                                                                                                                         --过滤冻品7.1.02……、8.8.02.02……、8.8.03.02
+                                                         AND t.FNumber NOT LIKE '7.1.02%'
+                                                         AND t.FNumber NOT LIKE '8.8.02.02%'
+                                                         AND t.FNumber NOT LIKE '8.8.03.02%'      
+                                 WHERE  v.FDate BETWEEN @BegDate1 AND @EndDate1
+                                 GROUP BY CONVERT(VARCHAR(100), v.FDate, 23)
+                               ) b ON b.部门代码 = a.部门代码
+                                      AND b.日期 = a.日期
+                                      AND a.部门名称 = b.部门名称
+            WHERE   a.部门代码 = '10.11'
+                    AND a.部门名称 = '门店管理部(猪)';   
+
+
+
+
+
+--收入  增加肉业 czq  2017-08-15 
+
+            SELECT  '10.11' 部门代码 ,
+                    部门名称 = '门店管理部(猪)' ,
+                    v.FDate '日期' ,
+                    SUM(FAuxQty) 数量 ,
+                    SUM(ISNULL(p.Fprice, 0.000) * FAuxQty) / 0.91 成本 ,
+                    SUM(FConsignAmount) FConsignAmount
+            INTO    #abcd2
+            FROM    AIS_YXRY2.dbo.ICStockBillEntry u
+                    INNER JOIN AIS_YXRY2.dbo.ICStockBill v ON v.FInterID = u.FInterID
+                    INNER JOIN AIS_YXRY2.dbo.t_Item w ON w.FItemID = u.FItemID
+                                                         AND FItemClassID = 4
+                    LEFT JOIN AIS_YXRY2.dbo.t_Department t ON t.FItemID = v.FDeptID
+                    LEFT JOIN yx_rs_ysprice p ON p.Fnumber = w.FNumber
+                                                 AND p.FDATE = v.FDate
+                    LEFT JOIN AIS_YXRY2.dbo.t_Stock s ON s.FItemID = u.FDCStockID
+            WHERE   v.FTranType = 21
+                    AND v.FCancellation = 0
+                    AND v.FDate BETWEEN @BegDate1 AND @EndDate1
+                    AND t.FNumber = '10.11'
+           --过滤冻品7.1.02……、8.8.02.02……、8.8.03.02
+            AND w.FNumber NOT LIKE '7.1.02%'
+            AND w.FNumber NOT LIKE '8.8.02.02%'
+            AND w.FNumber NOT LIKE '8.8.03.02%'
+            GROUP BY v.FDate; 
+
+            UPDATE  b
+            SET     
+                    成本 = ISNULL(b.成本, 0) + ISNULL(d.成本, 0)
+            FROM    #rsjyb2 b
+                    INNER JOIN #abcd2 d ON b.部门代码 = d.部门代码
+                                           AND b.部门名称 = d.部门名称
+                                           AND b.日期 = d.日期;
+
+
+
+            UPDATE  #rsjyb2
+            SET     单头毛利 = CONVERT(NUMERIC(10, 2), ROUND(毛利 / 头数, 2))
+            WHERE   部门代码 = '10.11'
+                    AND 部门名称 = '门店管理部(猪)'
+                    AND 头数 <> 0;   
+
+
+
+ 
+
+
+   
+            SELECT  部门代码 ,
+                    部门名称 ,
+                    ROUND(SUM(数量), 2) 数量 ,
+                    ROUND(SUM(毛利), 2) 毛利
+            INTO    #gk
+            FROM    #rsjyb2
+            GROUP BY 部门代码 ,
+                    部门名称;
+ 
+            UPDATE  t
+            SET     t.本月累计销量 = k.数量 ,
+                    t.本月累计毛利 = k.毛利
+            FROM    #ttt t
+                    INNER JOIN #gk k ON t.部门代码 = k.部门代码
+                                        AND t.部门名称 = k.部门名称;
+ 
+            DECLARE @本月累计销量 FLOAT ,
+                @本月累计毛利 FLOAT ,
+                @当天屠宰头数 FLOAT ,
+                @当月屠宰头数 FLOAT;
+ 
+            SELECT  @本月累计销量 = SUM(本月累计销量) ,
+                    @本月累计毛利 = SUM(本月累计毛利)
+            FROM    #ttt;
+ 
+            SELECT  @当天屠宰头数 = FDayHeadNum
+            FROM    yx_rs_DayHeadNum
+            WHERE   FDATE = @EndDate1;
+ 
+            SELECT  @当月屠宰头数 = SUM(FDayHeadNum)
+            FROM    yx_rs_DayHeadNum
+            WHERE   FDATE BETWEEN @BegDate1 AND @EndDate1;
+ 
+            UPDATE  #ttt
+            SET     本月累计销量 = ROUND(@本月累计销量, 2) ,
+                    本月累计毛利 = ROUND(@本月累计毛利, 2) ,
+                    当天屠宰头数 = @当天屠宰头数 ,
+                    当月屠宰头数 = @当月屠宰头数
+            WHERE   日期 = '合计';
+ 
+
+        END; 
+
+
+
+    SELECT  *
+    FROM    #ttt;  
+      
+      
+      
+      
+      
