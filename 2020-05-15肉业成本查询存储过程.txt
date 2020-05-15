@@ -1,0 +1,55 @@
+USE [YXERP];
+GO
+/****** Object:  StoredProcedure [dbo].[sp_sel_yx_rs_ysprice]    Script Date: 05/15/2020 09:50:51 ******/
+SET ANSI_NULLS ON;
+GO
+SET QUOTED_IDENTIFIER ON;
+GO
+ALTER  PROC [dbo].[sp_sel_yx_rs_ysprice]
+    (
+      @BegDate DATETIME , --开始日期          
+      @EndDate DATETIME  --结束日期  
+    )
+AS
+    SET NOCOUNT ON;  
+  
+    CREATE TABLE #ysprice
+        (
+          物料代码 VARCHAR(100) ,
+          物料名称 VARCHAR(100)
+        );
+
+    INSERT  INTO #ysprice
+            SELECT DISTINCT
+                    Fnumber ,
+                    ''
+            FROM    yx_rs_ysprice;
+    UPDATE  #ysprice
+    SET     物料名称 = w.FName
+    FROM    #ysprice y
+            INNER JOIN AIS_YXRY2.dbo.t_Item w ON w.FNumber = y.物料代码
+                                                 AND w.FItemClassID = 4;
+
+
+    DECLARE @str VARCHAR(200);
+    WHILE @BegDate <= @EndDate
+        BEGIN
+            SET @str = 'ALTER TABLE #ysprice ADD  ['
+                + CONVERT(VARCHAR(100), @BegDate, 23) + '] FLOAT';
+            EXECUTE(@str);
+            SET @str = 'UPDATE #ysprice SET ['
+                + CONVERT(VARCHAR(100), @BegDate, 23) + '] =b.fprice
+  FROM #ysprice a
+  INNER JOIN yx_rs_ysprice b ON a.物料代码=b.fnumber AND b.fdate='''
+                + CONVERT(VARCHAR(100), @BegDate, 23) + '''';
+            EXECUTE(@str);
+  
+            SET @BegDate = DATEADD(DAY, 1, @BegDate);
+        END; 
+
+
+    SELECT  *
+    FROM    #ysprice
+    ORDER BY 物料代码;
+    DROP TABLE #ysprice;
+
